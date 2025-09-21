@@ -123,7 +123,7 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
     return (
       <ThemedView style={styles.container}>
         <ThemedView style={styles.completionContainer}>
-          <ThemedText style={styles.completionTitle}>🎉 Congratulations! 🎉</ThemedText>
+          <ThemedText style={styles.completionTitle}>🎉 Congratulations!</ThemedText>
           <ThemedText style={styles.completionText}>
             You&apos;ve successfully spent exactly $100 billion!
           </ThemedText>
@@ -160,23 +160,6 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
         showsVerticalScrollIndicator={true}
         extraData={gameState.purchasedItems.length}
       />
-
-      <ThemedView style={styles.controlsContainer}>
-        <ThemedView style={styles.resetButton} onTouchEnd={() => {
-          Alert.alert(
-            'Reset Game',
-            'Are you sure you want to reset your progress?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Reset', onPress: () => {
-                viewModel.resetGame();
-              }}
-            ]
-          );
-        }}>
-          <ThemedText style={styles.resetButtonText}>Reset Game</ThemedText>
-        </ThemedView>
-      </ThemedView>
     </ThemedView>
   );
 }
@@ -202,8 +185,8 @@ const styles = StyleSheet.create({
   },
   budgetContainer: {
     alignItems: 'center',
-    marginBottom: 20,
-    padding: 20,
+    marginBottom: 15,
+    padding: 15,
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -212,16 +195,16 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   budgetLabel: {
-    fontSize: 18,
+    fontSize: 16,
     marginBottom: 5,
   },
   budgetAmount: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 5,
   },
   totalSpent: {
-    fontSize: 16,
+    fontSize: 14,
     opacity: 0.8,
   },
   itemsList: {
@@ -286,20 +269,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
   },
-  controlsContainer: {
-    marginTop: 10,
-  },
-  resetButton: {
-    backgroundColor: '#f44336',
-    borderRadius: 10,
-    padding: 12,
-    alignItems: 'center',
-  },
-  resetButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
-  },
   completionContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -311,6 +280,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
+    lineHeight: 40,
   },
   completionText: {
     fontSize: 20,
