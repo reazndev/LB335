@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, useWindowDimensions } from 'react-native';
+import { Modal, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { GameViewModel, SettingsViewModel, StatsViewModel } from '@/src/viewmodels';
 
 interface SettingsViewProps {
@@ -15,9 +16,33 @@ interface SettingsViewProps {
 export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel }: SettingsViewProps) {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
+  const colorScheme = useColorScheme();
   
   const [settings, setSettings] = useState(settingsViewModel.getSettings());
   const [formattedSettings, setFormattedSettings] = useState(settingsViewModel.getFormattedSettings());
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+
+  const showStyledAlert = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setConfirmAction(() => onConfirm || (() => {}));
+    setAlertVisible(true);
+  }, []);
+
+  const hideAlert = useCallback(() => {
+    setAlertVisible(false);
+    setConfirmAction(null);
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    if (confirmAction) {
+      confirmAction();
+    }
+    hideAlert();
+  }, [confirmAction, hideAlert]);
 
   useEffect(() => {
     const unsubscribe = settingsViewModel.subscribe(() => {
@@ -30,88 +55,27 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
     return unsubscribe;
   }, [settingsViewModel]);
 
-  const handleSoundToggle = useCallback(async (value: boolean) => {
-    await settingsViewModel.setSoundEnabled(value);
-  }, [settingsViewModel]);
-
-  const handleVibrationToggle = useCallback(async (value: boolean) => {
-    await settingsViewModel.setVibrationEnabled(value);
-  }, [settingsViewModel]);
-
-  const handleLargeTextToggle = useCallback(async (value: boolean) => {
-    await settingsViewModel.setAccessibility({ largeText: value });
-  }, [settingsViewModel]);
-
-  const handleHighContrastToggle = useCallback(async (value: boolean) => {
-    await settingsViewModel.setAccessibility({ highContrast: value });
-  }, [settingsViewModel]);
-
-  const handleScreenReaderToggle = useCallback(async (value: boolean) => {
-    await settingsViewModel.setAccessibility({ screenReader: value });
-  }, [settingsViewModel]);
-
   const handleResetData = useCallback(() => {
-    Alert.alert(
+    showStyledAlert(
       'Reset All Data',
       'This will permanently delete all game progress, statistics, and settings. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            await gameViewModel.resetGame();
-            await statsViewModel.resetStats();
-            await settingsViewModel.resetSettings();
-            Alert.alert('Success', 'All data has been reset.');
-          },
-        },
-      ]
+      async () => {
+        await gameViewModel.clearAllData();
+        showStyledAlert('Success', 'All data has been reset.');
+      }
     );
-  }, [gameViewModel, statsViewModel, settingsViewModel]);
+  }, [gameViewModel, showStyledAlert]);
 
-  const handleResetSettings = useCallback(() => {
-    Alert.alert(
-      'Reset Settings',
-      'This will restore all settings to their default values.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'default',
-          onPress: async () => {
-            await settingsViewModel.resetSettings();
-            Alert.alert('Success', 'Settings have been reset to defaults.');
-          },
-        },
-      ]
+  const handleNewGame = useCallback(() => {
+    showStyledAlert(
+      'Start New Game',
+      'This will reset your current game progress but keep your statistics and settings. Continue?',
+      async () => {
+        await gameViewModel.resetGame();
+        showStyledAlert('Success', 'New game started! Your statistics and settings have been preserved.');
+      }
     );
-  }, [settingsViewModel]);
-
-  const SettingRow = ({ 
-    title, 
-    value, 
-    onValueChange, 
-    description 
-  }: { 
-    title: string; 
-    value: boolean; 
-    onValueChange: (value: boolean) => void;
-    description?: string;
-  }) => (
-    <ThemedView style={styles.settingRow}>
-      <ThemedView style={styles.settingInfo}>
-        <ThemedText style={styles.settingTitle}>{title}</ThemedText>
-        {description && <ThemedText style={styles.settingDescription}>{description}</ThemedText>}
-      </ThemedView>
-      <Switch 
-        value={value} 
-        onValueChange={onValueChange}
-        trackColor={{ false: '#e9ecef', true: '#28a745' }}
-        thumbColor={value ? '#fff' : '#6c757d'}
-      />
-    </ThemedView>
-  );
+  }, [gameViewModel, showStyledAlert]);
 
   const ActionButton = ({ 
     title, 
@@ -146,85 +110,28 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
           <ThemedText style={styles.subtitle}>Configure your app experience</ThemedText>
         </ThemedView>
 
-        <Collapsible title="Sound & Haptics">
-          <ThemedView style={styles.collapsibleContent}>
-            <SettingRow
-              title="Sound Effects"
-              value={settings.soundEnabled}
-              onValueChange={handleSoundToggle}
-              description="Play sounds for purchases and interactions"
-            />
-            <SettingRow
-              title="Vibration"
-              value={settings.vibrationEnabled}
-              onValueChange={handleVibrationToggle}
-              description="Haptic feedback for touch interactions"
-            />
-          </ThemedView>
-        </Collapsible>
-
-        <Collapsible title="Accessibility">
-          <ThemedView style={styles.collapsibleContent}>
-            <SettingRow
-              title="Large Text"
-              value={settings.accessibility.largeText}
-              onValueChange={handleLargeTextToggle}
-              description="Increase text size for better readability"
-            />
-            <SettingRow
-              title="High Contrast"
-              value={settings.accessibility.highContrast}
-              onValueChange={handleHighContrastToggle}
-              description="Enhanced contrast for better visibility"
-            />
-            <SettingRow
-              title="Screen Reader Support"
-              value={settings.accessibility.screenReader}
-              onValueChange={handleScreenReaderToggle}
-              description="Optimize for screen reader accessibility"
-            />
-          </ThemedView>
-        </Collapsible>
-
-        <Collapsible title="App Information">
-          <ThemedView style={styles.collapsibleContent}>
-            <ThemedView style={styles.infoRow}>
-              <ThemedText style={styles.infoLabel}>Theme:</ThemedText>
-              <ThemedText style={styles.infoValue}>{formattedSettings.theme}</ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.infoRow}>
-              <ThemedText style={styles.infoLabel}>Language:</ThemedText>
-              <ThemedText style={styles.infoValue}>{formattedSettings.language}</ThemedText>
-            </ThemedView>
-            <ThemedText style={styles.infoDescription}>
-              Built with React Native and Expo using MVVM architecture for optimal performance and maintainability.
-            </ThemedText>
-          </ThemedView>
-        </Collapsible>
-
-        <Collapsible title="Data Management">
-          <ThemedView style={styles.collapsibleContent}>
-            <ThemedText style={styles.dataDescription}>
-              Manage your app data and reset options. Use with caution as these actions cannot be undone.
-            </ThemedText>
-            
-            <ActionButton
-              title="Reset Settings Only"
-              onPress={handleResetSettings}
-              variant="default"
-            />
-            
-            <ActionButton
-              title="Reset All Data"
-              onPress={handleResetData}
-              variant="destructive"
-            />
-            
-            <ThemedText style={styles.warningText}>
-              Reset All Data will permanently delete your game progress, statistics, and settings.
-            </ThemedText>
-          </ThemedView>
-        </Collapsible>
+        <ThemedView style={styles.dataManagementSection}>
+          <ThemedText style={styles.sectionTitle}>Data Management</ThemedText>
+          <ThemedText style={styles.dataDescription}>
+            Manage your app data and reset options. Use with caution as these actions cannot be undone.
+          </ThemedText>
+          
+          <ActionButton
+            title="Start New Game"
+            onPress={handleNewGame}
+            variant="default"
+          />
+          
+          <ActionButton
+            title="Reset All Data"
+            onPress={handleResetData}
+            variant="destructive"
+          />
+          
+          <ThemedText style={styles.warningText}>
+            Reset All Data will permanently delete your game progress, statistics, and settings.
+          </ThemedText>
+        </ThemedView>
 
         <ThemedView style={styles.footer}>
           <ThemedText style={styles.footerText}>
@@ -233,6 +140,41 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
           </ThemedText>
         </ThemedView>
       </ThemedView>
+
+      <Modal
+        visible={alertVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={hideAlert}
+      >
+        <ThemedView style={styles.modalOverlay}>
+          <ThemedView style={[
+            styles.modalContent,
+            { backgroundColor: colorScheme === 'dark' ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)' }
+          ]}>
+            <ThemedText style={[
+              styles.modalTitle,
+              { color: Colors[colorScheme ?? 'light'].text }
+            ]}>
+              {alertTitle}
+            </ThemedText>
+            <ThemedText style={[
+              styles.modalMessage,
+              { color: Colors[colorScheme ?? 'light'].text, opacity: 0.8 }
+            ]}>
+              {alertMessage}
+            </ThemedText>
+            <ThemedView style={styles.modalButtons}>
+              <ThemedView style={[styles.modalButton, styles.cancelButton]} onTouchEnd={hideAlert}>
+                <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+              </ThemedView>
+              <ThemedView style={[styles.modalButton, styles.confirmButton]} onTouchEnd={handleConfirm}>
+                <ThemedText style={styles.confirmButtonText}>Confirm</ThemedText>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
+        </ThemedView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -240,112 +182,165 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   content: {
     flex: 1,
+    padding: 20,
+    paddingTop: 50,
   },
   header: {
-    padding: 20,
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerTablet: {
     padding: 30,
   },
   title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    color: '#6c757d',
+    fontSize: 16,
+    opacity: 0.8,
     textAlign: 'center',
   },
-  collapsibleContent: {
-    padding: 12,
+  dataManagementSection: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 15,
+    padding: 20,
+    marginVertical: 5,
+    marginHorizontal: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 12,
-    color: '#6c757d',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: '#495057',
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#28a745',
-  },
-  infoDescription: {
-    fontSize: 12,
-    color: '#6c757d',
-    marginTop: 12,
-    lineHeight: 18,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
   },
   dataDescription: {
-    fontSize: 14,
-    color: '#495057',
+    fontSize: 16,
+    opacity: 0.8,
     marginBottom: 16,
-    lineHeight: 20,
+    lineHeight: 22,
+    textAlign: 'center',
   },
   actionButton: {
-    backgroundColor: '#007bff',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: '#4CAF50',
+    borderRadius: 10,
+    padding: 15,
     alignItems: 'center',
     marginVertical: 8,
   },
   destructiveButton: {
-    backgroundColor: '#dc3545',
+    backgroundColor: '#f44336',
   },
   actionButtonText: {
-    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    color: 'white',
   },
   destructiveButtonText: {
-    color: '#fff',
+    color: 'white',
   },
   warningText: {
-    fontSize: 12,
-    color: '#dc3545',
+    fontSize: 14,
+    color: '#f44336',
     textAlign: 'center',
     marginTop: 8,
     fontStyle: 'italic',
   },
   footer: {
-    padding: 20,
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    padding: 20,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
     marginTop: 20,
   },
   footerText: {
-    fontSize: 12,
-    color: '#6c757d',
+    fontSize: 14,
+    opacity: 0.7,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    padding: 25,
+    margin: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#333',
+  },
+  modalMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 25,
+    color: '#666',
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButton: {
+    borderRadius: 10,
+    padding: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  cancelButton: {
+    backgroundColor: '#666',
+  },
+  confirmButton: {
+    backgroundColor: '#4CAF50',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
   },
 });

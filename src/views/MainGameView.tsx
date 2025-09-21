@@ -1,9 +1,11 @@
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Vibration } from 'react-native';
+import { FlatList, Modal, StyleSheet, Vibration } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { GameState, PurchaseItem } from '@/src/models';
 import { GameViewModel } from '@/src/viewmodels';
 
@@ -15,6 +17,21 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
   const [gameState, setGameState] = useState<GameState>(viewModel.getGameState());
   const [allItems, setAllItems] = useState<PurchaseItem[]>(viewModel.getAllItems());
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(viewModel.isDataLoaded());
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  
+  const colorScheme = useColorScheme();
+
+  const showStyledAlert = useCallback((title: string, message: string) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertVisible(true);
+  }, []);
+
+  const hideAlert = useCallback(() => {
+    setAlertVisible(false);
+  }, []);
 
   const hapticPatterns = {
     purchase: async () => {
@@ -49,17 +66,13 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
 
       if (viewModel.isGameCompleted()) {
         await hapticPatterns.gameComplete();
-        Alert.alert(
-          'Congratulations!',
-          'You\'ve spent exactly $100 billion! Game completed!',
-          [{ text: 'OK' }]
-        );
+        // Removed default Alert popup - now shows congratulations screen instead
       }
     } else {
       await hapticPatterns.error();
-      Alert.alert('Cannot afford this item', 'You don\'t have enough money for this purchase.');
+      showStyledAlert('Cannot afford this item', 'You don\'t have enough money for this purchase.');
     }
-  }, [viewModel]);
+  }, [viewModel, showStyledAlert]);
 
   const formatCurrency = (amount: number): string => {
     if (amount >= 1000000000) {
@@ -123,7 +136,7 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
     return (
       <ThemedView style={styles.container}>
         <ThemedView style={styles.completionContainer}>
-          <ThemedText style={styles.completionTitle}>🎉 Congratulations! 🎉</ThemedText>
+          <ThemedText style={styles.completionTitle}>🎉 Congratulations!</ThemedText>
           <ThemedText style={styles.completionText}>
             You&apos;ve successfully spent exactly $100 billion!
           </ThemedText>
@@ -135,6 +148,9 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
               Math.round((gameState.endTime.getTime() - gameState.startTime.getTime()) / 1000) + ' seconds' :
               'Unknown'}
           </ThemedText>
+          <ThemedView style={styles.newGameButton} onTouchEnd={() => viewModel.resetGame()}>
+            <ThemedText style={styles.newGameButtonText}>Start New Game</ThemedText>
+          </ThemedView>
         </ThemedView>
       </ThemedView>
     );
@@ -161,22 +177,35 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
         extraData={gameState.purchasedItems.length}
       />
 
-      <ThemedView style={styles.controlsContainer}>
-        <ThemedView style={styles.resetButton} onTouchEnd={() => {
-          Alert.alert(
-            'Reset Game',
-            'Are you sure you want to reset your progress?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Reset', onPress: () => {
-                viewModel.resetGame();
-              }}
-            ]
-          );
-        }}>
-          <ThemedText style={styles.resetButtonText}>Reset Game</ThemedText>
+      <Modal
+        visible={alertVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={hideAlert}
+      >
+        <ThemedView style={styles.modalOverlay}>
+          <ThemedView style={[
+            styles.modalContent,
+            { backgroundColor: colorScheme === 'dark' ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)' }
+          ]}>
+            <ThemedText style={[
+              styles.modalTitle,
+              { color: Colors[colorScheme ?? 'light'].text }
+            ]}>
+              {alertTitle}
+            </ThemedText>
+            <ThemedText style={[
+              styles.modalMessage,
+              { color: Colors[colorScheme ?? 'light'].text }
+            ]}>
+              {alertMessage}
+            </ThemedText>
+            <ThemedView style={styles.modalButton} onTouchEnd={hideAlert}>
+              <ThemedText style={styles.modalButtonText}>OK</ThemedText>
+            </ThemedView>
+          </ThemedView>
         </ThemedView>
-      </ThemedView>
+      </Modal>
     </ThemedView>
   );
 }
@@ -185,6 +214,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    paddingTop: 50,
   },
   loadingContainer: {
     flex: 1,
@@ -202,8 +232,8 @@ const styles = StyleSheet.create({
   },
   budgetContainer: {
     alignItems: 'center',
-    marginBottom: 20,
-    padding: 20,
+    marginBottom: 15,
+    padding: 15,
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -212,16 +242,16 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   budgetLabel: {
-    fontSize: 18,
+    fontSize: 16,
     marginBottom: 5,
   },
   budgetAmount: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 5,
   },
   totalSpent: {
-    fontSize: 16,
+    fontSize: 14,
     opacity: 0.8,
   },
   itemsList: {
@@ -286,20 +316,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
   },
-  controlsContainer: {
-    marginTop: 10,
-  },
-  resetButton: {
-    backgroundColor: '#f44336',
-    borderRadius: 10,
-    padding: 12,
-    alignItems: 'center',
-  },
-  resetButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
-  },
   completionContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -311,6 +327,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
+    lineHeight: 40,
   },
   completionText: {
     fontSize: 20,
@@ -321,5 +338,67 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 10,
+  },
+  newGameButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 15,
+    padding: 15,
+    alignItems: 'center',
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  newGameButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    padding: 25,
+    margin: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#000',
+  },
+  modalMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 25,
+    color: '#000',
+    opacity: 0.8,
+    lineHeight: 22,
+  },
+  modalButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 10,
+    padding: 12,
+    paddingHorizontal: 30,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
   },
 });

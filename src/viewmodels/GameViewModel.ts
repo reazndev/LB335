@@ -373,10 +373,13 @@ export class GameViewModel extends BaseViewModel {
       this.gameState.totalSpent += item.price;
       this.gameState.purchasedItems.push({ ...item });
 
+      // Update statistics after each purchase
+      this.updateStatisticsOnPurchase(item);
+
       if (this.gameState.currentBudget === 0) {
         this.gameState.gameCompleted = true;
         this.gameState.endTime = new Date();
-        this.updateStatisticsOnCompletion(); // Update statistics on completion
+        this.updateStatisticsOnCompletion(); // Update completion-based statistics
       }
 
       this.saveGameState();
@@ -396,6 +399,9 @@ export class GameViewModel extends BaseViewModel {
       this.gameState.totalSpent -= item.price;
       this.gameState.purchasedItems.splice(ownedItemIndex, 1);
       this.gameState.gameCompleted = false;
+      
+      // Update statistics when selling an item
+      this.updateStatisticsOnSale(item);
       
       this.saveGameState();
       this.notifyChange();
@@ -548,25 +554,52 @@ export class GameViewModel extends BaseViewModel {
     return { ...this.statistics };
   }
 
-  private async updateStatisticsOnCompletion(): Promise<void> {
-    if (this.gameState.gameCompleted && this.gameState.endTime && this.gameState.startTime) {
-      const completionTime = Math.round((this.gameState.endTime.getTime() - this.gameState.startTime.getTime()) / 1000);
+  private async updateStatisticsOnPurchase(item: PurchaseItem): Promise<void> {
+    // Update cumulative statistics after each purchase
+    this.statistics.totalMoneySpent += item.price;
+    this.statistics.totalItemsPurchased += 1;
 
-      this.statistics.gamesPlayed += 1;
-      this.statistics.totalMoneySpent += this.gameState.totalSpent;
-      this.statistics.totalItemsPurchased += this.gameState.purchasedItems.length;
+    // Update most expensive item if this is more expensive
+    if (!this.statistics.mostExpensiveItem || item.price > this.statistics.mostExpensiveItem.price) {
+      this.statistics.mostExpensiveItem = { ...item };
+    }
 
-      if (!this.statistics.fastestCompletion || completionTime < this.statistics.fastestCompletion) {
-        this.statistics.fastestCompletion = completionTime;
-      }
+    // Update favorite category based on all purchases
+    this.updateFavoriteCategory();
 
-      this.statistics.averageItemsPerGame = this.statistics.totalItemsPurchased / this.statistics.gamesPlayed;
+    // Save updated statistics
+    await this.saveStatistics();
+  }
 
-      const categoryCounts = this.gameState.purchasedItems.reduce((acc, item) => {
-        acc[item.category] = (acc[item.category] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+  private async updateStatisticsOnSale(item: PurchaseItem): Promise<void> {
+    // Update cumulative statistics when selling an item
+    this.statistics.totalMoneySpent -= item.price;
+    this.statistics.totalItemsPurchased -= 1;
 
+    // Update favorite category based on remaining purchases
+    this.updateFavoriteCategory();
+
+    // Check if we need to update most expensive item
+    if (this.statistics.mostExpensiveItem?.id === item.id) {
+      // Find the new most expensive item
+      const mostExpensive = this.gameState.purchasedItems.reduce((max, current) =>
+        max && max.price > current.price ? max : current, null as PurchaseItem | null
+      );
+      this.statistics.mostExpensiveItem = mostExpensive || undefined;
+    }
+
+    // Save updated statistics
+    await this.saveStatistics();
+  }
+
+  private updateFavoriteCategory(): void {
+    // Count all purchases by category
+    const categoryCounts = this.gameState.purchasedItems.reduce((acc, item) => {
+      acc[item.category] = (acc[item.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    if (Object.keys(categoryCounts).length > 0) {
       const favoriteCategory = Object.entries(categoryCounts).reduce((a, b) =>
         categoryCounts[a[0]] > categoryCounts[b[0]] ? a : b
       )?.[0];
@@ -574,14 +607,23 @@ export class GameViewModel extends BaseViewModel {
       if (favoriteCategory) {
         this.statistics.favoriteCategory = favoriteCategory;
       }
+    } else {
+      // No purchases left
+      this.statistics.favoriteCategory = undefined;
+    }
+  }
 
-      const mostExpensive = this.gameState.purchasedItems.reduce((max, item) =>
-        max && max.price > item.price ? max : item, null as PurchaseItem | null
-      );
+  private async updateStatisticsOnCompletion(): Promise<void> {
+    if (this.gameState.gameCompleted && this.gameState.endTime && this.gameState.startTime) {
+      const completionTime = Math.round((this.gameState.endTime.getTime() - this.gameState.startTime.getTime()) / 1000);
 
-      if (mostExpensive && (!this.statistics.mostExpensiveItem || mostExpensive.price > this.statistics.mostExpensiveItem.price)) {
-        this.statistics.mostExpensiveItem = mostExpensive;
+      this.statistics.gamesPlayed += 1;
+
+      if (!this.statistics.fastestCompletion || completionTime < this.statistics.fastestCompletion) {
+        this.statistics.fastestCompletion = completionTime;
       }
+
+      this.statistics.averageItemsPerGame = this.statistics.totalItemsPurchased / this.statistics.gamesPlayed;
 
       await this.saveStatistics();
     }
@@ -591,6 +633,23 @@ export class GameViewModel extends BaseViewModel {
     try {
       await AsyncStorage.multiRemove(['@gameState', '@gameStatistics']);
       console.log('All data cleared');
+      
+      // Reset in-memory state
+      this.gameState = {
+        currentBudget: 100000000000,
+        purchasedItems: [],
+        totalSpent: 0,
+        gameCompleted: false,
+        startTime: new Date(),
+      };
+      this.statistics = {
+        gamesPlayed: 0,
+        averageItemsPerGame: 0,
+        totalMoneySpent: 0,
+        totalItemsPurchased: 0,
+      };
+      
+      this.notifyChange();
     } catch (e) {
       console.error('Failed to clear data', e);
     }
