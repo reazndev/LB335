@@ -1,16 +1,13 @@
 // Game Tab Screen - MVVM Architecture Integration
-// Acts as a container that initializes ViewModels and passes them to Views
-// Demonstrates proper MVVM separation where the tab screen coordinates components
+// Acts as a container that receives shared ViewModels from parent layout
 
-import { useState } from 'react';
-
-import { GameViewModel } from '@/src/viewmodels';
 import { MainGameView } from '@/src/views';
+import { useViewModels } from './_layout';
 
 export default function GameScreen() {
-  // MVVM: Initialize ViewModel once per screen instance
-  const [gameViewModel] = useState(() => new GameViewModel());
+  // Get shared ViewModel from context
+  const { gameViewModel } = useViewModels();
 
-  // MVVM: Pass ViewModel to View component for proper separation
+  // MVVM: Pass shared ViewModel to View component
   return <MainGameView viewModel={gameViewModel} />;
 }

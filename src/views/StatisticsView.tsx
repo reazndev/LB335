@@ -164,10 +164,11 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
   },
   content: {
     flex: 1,
+    padding: 20,
+    paddingTop: 50,
   },
   header: {
     alignItems: 'center',

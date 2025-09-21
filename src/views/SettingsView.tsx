@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, useWindowDimensions } from 'react-native';
+import { Alert, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
 import { GameViewModel, SettingsViewModel, StatsViewModel } from '@/src/viewmodels';
 
 interface SettingsViewProps {
@@ -30,26 +29,6 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
     return unsubscribe;
   }, [settingsViewModel]);
 
-  const handleSoundToggle = useCallback(async (value: boolean) => {
-    await settingsViewModel.setSoundEnabled(value);
-  }, [settingsViewModel]);
-
-  const handleVibrationToggle = useCallback(async (value: boolean) => {
-    await settingsViewModel.setVibrationEnabled(value);
-  }, [settingsViewModel]);
-
-  const handleLargeTextToggle = useCallback(async (value: boolean) => {
-    await settingsViewModel.setAccessibility({ largeText: value });
-  }, [settingsViewModel]);
-
-  const handleHighContrastToggle = useCallback(async (value: boolean) => {
-    await settingsViewModel.setAccessibility({ highContrast: value });
-  }, [settingsViewModel]);
-
-  const handleScreenReaderToggle = useCallback(async (value: boolean) => {
-    await settingsViewModel.setAccessibility({ screenReader: value });
-  }, [settingsViewModel]);
-
   const handleResetData = useCallback(() => {
     Alert.alert(
       'Reset All Data',
@@ -60,7 +39,7 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
           text: 'Reset',
           style: 'destructive',
           onPress: async () => {
-            await gameViewModel.resetGame();
+            await gameViewModel.clearAllData();
             await statsViewModel.resetStats();
             await settingsViewModel.resetSettings();
             Alert.alert('Success', 'All data has been reset.');
@@ -70,48 +49,23 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
     );
   }, [gameViewModel, statsViewModel, settingsViewModel]);
 
-  const handleResetSettings = useCallback(() => {
+  const handleNewGame = useCallback(() => {
     Alert.alert(
-      'Reset Settings',
-      'This will restore all settings to their default values.',
+      'Start New Game',
+      'This will reset your current game progress but keep your statistics and settings. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reset',
+          text: 'Start New Game',
           style: 'default',
           onPress: async () => {
-            await settingsViewModel.resetSettings();
-            Alert.alert('Success', 'Settings have been reset to defaults.');
+            await gameViewModel.resetGame();
+            Alert.alert('Success', 'New game started! Your statistics and settings have been preserved.');
           },
         },
       ]
     );
-  }, [settingsViewModel]);
-
-  const SettingRow = ({ 
-    title, 
-    value, 
-    onValueChange, 
-    description 
-  }: { 
-    title: string; 
-    value: boolean; 
-    onValueChange: (value: boolean) => void;
-    description?: string;
-  }) => (
-    <ThemedView style={styles.settingRow}>
-      <ThemedView style={styles.settingInfo}>
-        <ThemedText style={styles.settingTitle}>{title}</ThemedText>
-        {description && <ThemedText style={styles.settingDescription}>{description}</ThemedText>}
-      </ThemedView>
-      <Switch 
-        value={value} 
-        onValueChange={onValueChange}
-        trackColor={{ false: '#e9ecef', true: '#28a745' }}
-        thumbColor={value ? '#fff' : '#6c757d'}
-      />
-    </ThemedView>
-  );
+  }, [gameViewModel]);
 
   const ActionButton = ({ 
     title, 
@@ -146,85 +100,28 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
           <ThemedText style={styles.subtitle}>Configure your app experience</ThemedText>
         </ThemedView>
 
-        <Collapsible title="Sound & Haptics">
-          <ThemedView style={styles.collapsibleContent}>
-            <SettingRow
-              title="Sound Effects"
-              value={settings.soundEnabled}
-              onValueChange={handleSoundToggle}
-              description="Play sounds for purchases and interactions"
-            />
-            <SettingRow
-              title="Vibration"
-              value={settings.vibrationEnabled}
-              onValueChange={handleVibrationToggle}
-              description="Haptic feedback for touch interactions"
-            />
-          </ThemedView>
-        </Collapsible>
-
-        <Collapsible title="Accessibility">
-          <ThemedView style={styles.collapsibleContent}>
-            <SettingRow
-              title="Large Text"
-              value={settings.accessibility.largeText}
-              onValueChange={handleLargeTextToggle}
-              description="Increase text size for better readability"
-            />
-            <SettingRow
-              title="High Contrast"
-              value={settings.accessibility.highContrast}
-              onValueChange={handleHighContrastToggle}
-              description="Enhanced contrast for better visibility"
-            />
-            <SettingRow
-              title="Screen Reader Support"
-              value={settings.accessibility.screenReader}
-              onValueChange={handleScreenReaderToggle}
-              description="Optimize for screen reader accessibility"
-            />
-          </ThemedView>
-        </Collapsible>
-
-        <Collapsible title="App Information">
-          <ThemedView style={styles.collapsibleContent}>
-            <ThemedView style={styles.infoRow}>
-              <ThemedText style={styles.infoLabel}>Theme:</ThemedText>
-              <ThemedText style={styles.infoValue}>{formattedSettings.theme}</ThemedText>
-            </ThemedView>
-            <ThemedView style={styles.infoRow}>
-              <ThemedText style={styles.infoLabel}>Language:</ThemedText>
-              <ThemedText style={styles.infoValue}>{formattedSettings.language}</ThemedText>
-            </ThemedView>
-            <ThemedText style={styles.infoDescription}>
-              Built with React Native and Expo using MVVM architecture for optimal performance and maintainability.
-            </ThemedText>
-          </ThemedView>
-        </Collapsible>
-
-        <Collapsible title="Data Management">
-          <ThemedView style={styles.collapsibleContent}>
-            <ThemedText style={styles.dataDescription}>
-              Manage your app data and reset options. Use with caution as these actions cannot be undone.
-            </ThemedText>
-            
-            <ActionButton
-              title="Reset Settings Only"
-              onPress={handleResetSettings}
-              variant="default"
-            />
-            
-            <ActionButton
-              title="Reset All Data"
-              onPress={handleResetData}
-              variant="destructive"
-            />
-            
-            <ThemedText style={styles.warningText}>
-              Reset All Data will permanently delete your game progress, statistics, and settings.
-            </ThemedText>
-          </ThemedView>
-        </Collapsible>
+        <ThemedView style={styles.dataManagementSection}>
+          <ThemedText style={styles.sectionTitle}>Data Management</ThemedText>
+          <ThemedText style={styles.dataDescription}>
+            Manage your app data and reset options. Use with caution as these actions cannot be undone.
+          </ThemedText>
+          
+          <ActionButton
+            title="Start New Game"
+            onPress={handleNewGame}
+            variant="default"
+          />
+          
+          <ActionButton
+            title="Reset All Data"
+            onPress={handleResetData}
+            variant="destructive"
+          />
+          
+          <ThemedText style={styles.warningText}>
+            Reset All Data will permanently delete your game progress, statistics, and settings.
+          </ThemedText>
+        </ThemedView>
 
         <ThemedView style={styles.footer}>
           <ThemedText style={styles.footerText}>
@@ -240,10 +137,11 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
   },
   content: {
     flex: 1,
+    padding: 20,
+    paddingTop: 50,
   },
   header: {
     alignItems: 'center',
@@ -271,7 +169,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     textAlign: 'center',
   },
-  collapsibleContent: {
+  dataManagementSection: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 15,
     padding: 20,
@@ -283,48 +181,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  settingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  settingInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  infoLabel: {
-    fontSize: 16,
-    opacity: 0.8,
-  },
-  infoValue: {
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  infoDescription: {
-    fontSize: 14,
-    opacity: 0.7,
-    marginTop: 12,
-    lineHeight: 20,
     textAlign: 'center',
+    marginBottom: 12,
   },
   dataDescription: {
     fontSize: 16,

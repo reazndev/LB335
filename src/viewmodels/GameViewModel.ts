@@ -591,6 +591,23 @@ export class GameViewModel extends BaseViewModel {
     try {
       await AsyncStorage.multiRemove(['@gameState', '@gameStatistics']);
       console.log('All data cleared');
+      
+      // Reset in-memory state
+      this.gameState = {
+        currentBudget: 100000000000,
+        purchasedItems: [],
+        totalSpent: 0,
+        gameCompleted: false,
+        startTime: new Date(),
+      };
+      this.statistics = {
+        gamesPlayed: 0,
+        averageItemsPerGame: 0,
+        totalMoneySpent: 0,
+        totalItemsPurchased: 0,
+      };
+      
+      this.notifyChange();
     } catch (e) {
       console.error('Failed to clear data', e);
     }
