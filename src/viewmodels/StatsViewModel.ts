@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameState, Statistics } from '../models';
 
 export class StatsViewModel {
@@ -38,8 +38,9 @@ export class StatsViewModel {
 
   async saveStatistics(): Promise<void> {
     try {
-      const jsonValue = JSON.stringify(this.statistics);
-      await AsyncStorage.setItem('@statistics', jsonValue);
+      // const jsonValue = JSON.stringify(this.statistics);
+      // await AsyncStorage.setItem('@statistics', jsonValue);
+      console.log('Statistics saved (temporarily disabled)');
     } catch (e) {
       console.error('Failed to save statistics', e);
     }
@@ -47,10 +48,11 @@ export class StatsViewModel {
 
   async loadStatistics(): Promise<void> {
     try {
-      const jsonValue = await AsyncStorage.getItem('@statistics');
-      if (jsonValue != null) {
-        this.statistics = JSON.parse(jsonValue);
-      }
+      // const jsonValue = await AsyncStorage.getItem('@statistics');
+      // if (jsonValue != null) {
+      //   this.statistics = JSON.parse(jsonValue);
+      // }
+      console.log('Statistics loaded (temporarily disabled)');
     } catch (e) {
       console.error('Failed to load statistics', e);
     }

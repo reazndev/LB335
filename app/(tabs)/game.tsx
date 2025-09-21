@@ -1,8 +1,8 @@
 import * as Haptics from 'expo-haptics';
+import { Accelerometer } from 'expo-sensors';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import { accelerometer, SensorTypes, setUpdateIntervalForType } from 'react-native-sensors';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -37,15 +37,17 @@ export default function GameScreen() {
     });
 
     // Set up accelerometer for shake detection
-    setUpdateIntervalForType(SensorTypes.accelerometer, 100); // 100ms
-    const subscription = accelerometer.subscribe(({ x, y, z }) => {
+    Accelerometer.setUpdateInterval(100); // 100ms
+    const subscription = Accelerometer.addListener(({ x, y, z }) => {
       const magnitude = Math.sqrt(x * x + y * y + z * z);
       if (magnitude > 15) { // SHAKE_THRESHOLD
         handleShake();
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      Accelerometer.removeAllListeners();
+    };
   }, [gameVM, handleShake]);
 
   const handleSwipe = (event: any) => {

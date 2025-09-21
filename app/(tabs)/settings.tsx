@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -12,8 +12,8 @@ export default function SettingsScreen() {
   const isTablet = width > 768;
 
   const resetData = async () => {
-    await AsyncStorage.clear();
-    alert('All data has been reset.');
+    // await AsyncStorage.clear();
+    alert('Data reset (temporarily disabled)');
   };
 
   return (

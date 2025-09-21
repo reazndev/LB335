@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// import AsyncStorage from 'react-native';
 import { GameState, PurchaseItem } from '../models';
 
 export class GameViewModel {
@@ -75,8 +75,9 @@ export class GameViewModel {
 
   async saveGameState(): Promise<void> {
     try {
-      const jsonValue = JSON.stringify(this.gameState);
-      await AsyncStorage.setItem('@gameState', jsonValue);
+      // const jsonValue = JSON.stringify(this.gameState);
+      // await AsyncStorage.setItem('@gameState', jsonValue);
+      console.log('Game state saved (temporarily disabled)');
     } catch (e) {
       console.error('Failed to save game state', e);
     }
@@ -84,15 +85,16 @@ export class GameViewModel {
 
   async loadGameState(): Promise<void> {
     try {
-      const jsonValue = await AsyncStorage.getItem('@gameState');
-      if (jsonValue != null) {
-        this.gameState = JSON.parse(jsonValue);
-        // Convert date strings back to Date objects
-        this.gameState.startTime = new Date(this.gameState.startTime);
-        if (this.gameState.endTime) {
-          this.gameState.endTime = new Date(this.gameState.endTime);
-        }
-      }
+      // const jsonValue = await AsyncStorage.getItem('@gameState');
+      // if (jsonValue != null) {
+      //   this.gameState = JSON.parse(jsonValue);
+      //   // Convert date strings back to Date objects
+      //   this.gameState.startTime = new Date(this.gameState.startTime);
+      //   if (this.gameState.endTime) {
+      //     this.gameState.endTime = new Date(this.gameState.endTime);
+      //   }
+      // }
+      console.log('Game state loaded (temporarily disabled)');
     } catch (e) {
       console.error('Failed to load game state', e);
     }
