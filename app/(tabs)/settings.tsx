@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -9,6 +10,11 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 export default function SettingsScreen() {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
+
+  const resetData = async () => {
+    await AsyncStorage.clear();
+    alert('All data has been reset.');
+  };
 
   return (
     <ParallaxScrollView
@@ -33,6 +39,9 @@ export default function SettingsScreen() {
       </Collapsible>
       <Collapsible title="Reset Data">
         <ThemedText>Clear all game data and statistics.</ThemedText>
+        <ThemedView style={styles.button} onTouchEnd={resetData}>
+          <ThemedText>Reset All Data</ThemedText>
+        </ThemedView>
       </Collapsible>
     </ParallaxScrollView>
   );
@@ -51,5 +60,14 @@ const styles = StyleSheet.create({
   },
   titleContainerTablet: {
     justifyContent: 'center',
+  },
+  button: {
+    minHeight: 44,
+    padding: 12,
+    backgroundColor: '#FF3B30',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
   },
 });
