@@ -3,7 +3,6 @@ import { RefreshControl, ScrollView, StyleSheet, useWindowDimensions } from 'rea
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
 import { GameViewModel } from '@/src/viewmodels';
 
 interface StatisticsViewProps {
@@ -85,65 +84,42 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
           </ThemedText>
         </ThemedView>
 
-        <ThemedView style={styles.statsGrid}>
-          <StatCard 
-            title="Games Played" 
-            value={formattedStats.gamesPlayed}
-            description="Total games started"
-          />
-          <StatCard 
-            title="Total Spent" 
-            value={formattedStats.totalMoneySpent}
-            description="Across all games"
-          />
-          <StatCard 
-            title="Items Purchased" 
-            value={formattedStats.totalItemsPurchased}
-            description="Total items bought"
-          />
-          <StatCard 
-            title="Fastest Completion" 
-            value={formattedStats.fastestCompletion}
-            description="Best time to spend all"
-          />
-        </ThemedView>
-
-        <ThemedView style={styles.detailsContainer}>
-          <Collapsible title="Purchase History">
-            <ThemedView style={styles.collapsibleContent}>
-              {stats.totalItemsPurchased > 0 ? (
-                <ThemedView>
-                  <ThemedText style={styles.detailText}>
-                    Total purchases: {stats.totalItemsPurchased} items
-                  </ThemedText>
-                  <ThemedText style={styles.detailText}>
-                    Total money spent: ${stats.totalMoneySpent.toLocaleString()}
-                  </ThemedText>
-                  {stats.gamesPlayed > 0 && (
-                    <ThemedText style={styles.detailText}>
-                      Games completed: {stats.gamesPlayed}
-                    </ThemedText>
-                  )}
-                  {viewModel.getGameState().purchasedItems.length > 0 && (
-                    <ThemedText style={styles.detailText}>
-                      Current game: {viewModel.getGameState().purchasedItems.length} items purchased
-                    </ThemedText>
-                  )}
-                </ThemedView>
-              ) : (
-                <ThemedText style={styles.noDataText}>
-                  No purchase history yet. Start playing to see your statistics!
-                </ThemedText>
-              )}
+        {isLoading ? (
+          <ThemedView style={styles.loadingContainer}>
+            <ThemedText style={styles.loadingText}>Loading your statistics...</ThemedText>
+          </ThemedView>
+        ) : (
+          <>
+            <ThemedView style={styles.statsGrid}>
+              <StatCard 
+                title="Games Played" 
+                value={formattedStats.gamesPlayed}
+                description="Total games started"
+              />
+              <StatCard 
+                title="Total Spent" 
+                value={formattedStats.totalMoneySpent}
+                description="Across all games"
+              />
+              <StatCard 
+                title="Items Purchased" 
+                value={formattedStats.totalItemsPurchased}
+                description="Total items bought"
+              />
+              <StatCard 
+                title="Fastest Completion" 
+                value={formattedStats.fastestCompletion}
+                description="Best time to spend all"
+              />
             </ThemedView>
-          </Collapsible>
-        </ThemedView>
 
-        <ThemedView style={styles.footer}>
-          <ThemedText style={styles.footerText}>
-            Statistics update in real-time as you play. Pull down to refresh.
-          </ThemedText>
-        </ThemedView>
+            <ThemedView style={styles.footer}>
+              <ThemedText style={styles.footerText}>
+                Statistics update in real-time as you play. Pull down to refresh.
+              </ThemedText>
+            </ThemedView>
+          </>
+        )}
       </ThemedView>
     </ScrollView>
   );
@@ -221,39 +197,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     textAlign: 'center',
   },
-  detailsContainer: {
-    marginBottom: 20,
-  },
-  collapsibleContent: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 15,
-    padding: 20,
-    marginVertical: 5,
-    marginHorizontal: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  detailText: {
-    fontSize: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  analyticsNote: {
-    fontSize: 14,
-    opacity: 0.7,
-    fontStyle: 'italic',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  noDataText: {
-    fontSize: 16,
-    opacity: 0.7,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
   footer: {
     alignItems: 'center',
     padding: 20,
@@ -267,6 +210,17 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 18,
     opacity: 0.7,
     textAlign: 'center',
   },
