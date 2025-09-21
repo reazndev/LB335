@@ -1,15 +1,13 @@
 // Statistics Tab Screen - MVVM Architecture Integration
-// Acts as a container that initializes ViewModels and passes them to Views
+// Acts as a container that receives shared ViewModels from parent layout
 
-import { useState } from 'react';
-
-import { GameViewModel } from '@/src/viewmodels';
 import { StatisticsView } from '@/src/views';
+import { useViewModels } from './_layout';
 
 export default function StatisticsScreen() {
-  // MVVM: Initialize ViewModel once per screen instance
-  const [gameViewModel] = useState(() => new GameViewModel());
+  // Get shared ViewModel from context
+  const { gameViewModel } = useViewModels();
 
-  // MVVM: Pass ViewModel to View component for proper separation
+  // MVVM: Pass shared ViewModel to View component
   return <StatisticsView viewModel={gameViewModel} />;
 }

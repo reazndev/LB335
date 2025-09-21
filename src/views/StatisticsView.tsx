@@ -3,7 +3,6 @@ import { RefreshControl, ScrollView, StyleSheet, useWindowDimensions } from 'rea
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
 import { GameViewModel } from '@/src/viewmodels';
 
 interface StatisticsViewProps {
@@ -15,14 +14,27 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
   const isTablet = width > 768;
   
   const [stats, setStats] = useState(viewModel.getStatistics());
-  const [analytics, setAnalytics] = useState(viewModel.getGameAnalytics());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(viewModel.isDataLoading());
   
   useEffect(() => {
     const unsubscribe = viewModel.subscribe(() => {
       setStats(viewModel.getStatistics());
-      setAnalytics(viewModel.getGameAnalytics());
+      setIsLoading(viewModel.isDataLoading());
     });
+
+    // If data is still loading, wait for it
+    if (viewModel.isDataLoading()) {
+      const checkLoading = () => {
+        if (!viewModel.isDataLoading()) {
+          setStats(viewModel.getStatistics());
+          setIsLoading(false);
+        } else {
+          setTimeout(checkLoading, 100);
+        }
+      };
+      checkLoading();
+    }
 
     return unsubscribe;
   }, [viewModel]);
@@ -67,95 +79,47 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
       <ThemedView style={styles.content}>
         <ThemedView style={[styles.header, isTablet && styles.headerTablet]}>
           <ThemedText type="title" style={styles.title}>Statistics</ThemedText>
-          <ThemedText style={styles.subtitle}>Your spending game performance</ThemedText>
-        </ThemedView>
-
-        <ThemedView style={[styles.statsGrid, isTablet && styles.statsGridTablet]}>
-          <StatCard 
-            title="Games Played" 
-            value={formattedStats.gamesPlayed}
-            description="Total games started"
-          />
-          <StatCard 
-            title="Total Spent" 
-            value={formattedStats.totalMoneySpent}
-            description="Across all games"
-          />
-          <StatCard 
-            title="Items Purchased" 
-            value={formattedStats.totalItemsPurchased}
-            description="Total items bought"
-          />
-          <StatCard 
-            title="Fastest Completion" 
-            value={formattedStats.fastestCompletion}
-            description="Best time to spend all"
-          />
-        </ThemedView>
-
-        <ThemedView style={styles.detailsContainer}>
-          <Collapsible title="Game Performance">
-            <ThemedView style={styles.collapsibleContent}>
-              <ThemedText style={styles.detailText}>
-                Average Items per Game: {formattedStats.averageItemsPerGame}
-              </ThemedText>
-              <ThemedText style={styles.detailText}>
-                Favorite Category: {formattedStats.favoriteCategory}
-              </ThemedText>
-              <ThemedText style={styles.detailText}>
-                Most Expensive Item: {formattedStats.mostExpensiveItem}
-              </ThemedText>
-              <ThemedText style={styles.detailText}>
-                Average Item Price: ${analytics.averageItemPrice.toFixed(0)}
-              </ThemedText>
-            </ThemedView>
-          </Collapsible>
-
-          <Collapsible title="Analytics">
-            <ThemedView style={styles.collapsibleContent}>
-              <ThemedText style={styles.detailText}>
-                Completion Percentage: {analytics.completionPercentage.toFixed(1)}%
-              </ThemedText>
-              <ThemedText style={styles.detailText}>
-                Total Items Purchased: {analytics.totalItems}
-              </ThemedText>
-              <ThemedText style={styles.detailText}>
-                Unique Categories: {analytics.uniqueCategories.length}
-              </ThemedText>
-              <ThemedText style={styles.analyticsNote}>
-                Analytics help you understand your spending patterns and improve your strategy.
-              </ThemedText>
-            </ThemedView>
-          </Collapsible>
-
-          <Collapsible title="Purchase History">
-            <ThemedView style={styles.collapsibleContent}>
-              {stats.gamesPlayed > 0 ? (
-                <ThemedText style={styles.detailText}>
-                  You&apos;ve played {stats.gamesPlayed} games and purchased {stats.totalItemsPurchased} items total.
-                </ThemedText>
-              ) : (
-                <ThemedText style={styles.noDataText}>
-                  No purchase history yet. Start playing to see your statistics!
-                </ThemedText>
-              )}
-            </ThemedView>
-          </Collapsible>
-
-          <Collapsible title="Achievements">
-            <ThemedView style={styles.collapsibleContent}>
-              <ThemedText style={styles.noDataText}>
-                Achievement system coming soon! Keep playing to unlock rewards.
-              </ThemedText>
-            </ThemedView>
-          </Collapsible>
-        </ThemedView>
-
-        <ThemedView style={styles.footer}>
-          <ThemedText style={styles.footerText}>
-            Statistics update in real-time as you play. Pull down to refresh.
+          <ThemedText style={styles.subtitle}>
+            {isLoading ? 'Loading statistics...' : 'Your spending game performance'}
           </ThemedText>
         </ThemedView>
+
+        {isLoading ? (
+          <ThemedView style={styles.loadingContainer}>
+            <ThemedText style={styles.loadingText}>Loading your statistics...</ThemedText>
+          </ThemedView>
+        ) : (
+          <>
+            <ThemedView style={styles.statsGrid}>
+              <StatCard 
+                title="Games Played" 
+                value={formattedStats.gamesPlayed}
+                description="Total games started"
+              />
+              <StatCard 
+                title="Total Spent" 
+                value={formattedStats.totalMoneySpent}
+                description="Across all games"
+              />
+              <StatCard 
+                title="Items Purchased" 
+                value={formattedStats.totalItemsPurchased}
+                description="Total items bought"
+              />
+              <StatCard 
+                title="Fastest Completion" 
+                value={formattedStats.fastestCompletion}
+                description="Best time to spend all"
+              />
+            </ThemedView>
+
+            <ThemedView style={styles.footer}>
+              <ThemedText style={styles.footerText}>
+                Statistics update in real-time as you play. Pull down to refresh.
+              </ThemedText>
+            </ThemedView>
+          </>
+        )}
       </ThemedView>
     </ScrollView>
   );
@@ -164,97 +128,100 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   content: {
     flex: 1,
+    padding: 20,
+    paddingTop: 50,
   },
   header: {
-    padding: 20,
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerTablet: {
     padding: 30,
   },
   title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    color: '#6c757d',
+    fontSize: 16,
+    opacity: 0.8,
     textAlign: 'center',
   },
   statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 16,
-    justifyContent: 'space-between',
-  },
-  statsGridTablet: {
-    padding: 24,
+    marginBottom: 20,
   },
   statCard: {
-    width: '48%',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 15,
+    padding: 20,
+    marginVertical: 5,
+    marginHorizontal: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
   },
   statCardTablet: {
-    width: '23%',
     padding: 20,
   },
   statTitle: {
-    fontSize: 14,
+    fontSize: 16,
     marginBottom: 8,
     textAlign: 'center',
+    opacity: 0.8,
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#28a745',
+    color: '#4CAF50',
     marginBottom: 4,
+    textAlign: 'center',
   },
   statDescription: {
-    fontSize: 12,
-    color: '#6c757d',
-    textAlign: 'center',
-  },
-  detailsContainer: {
-    padding: 16,
-  },
-  collapsibleContent: {
-    padding: 12,
-  },
-  detailText: {
     fontSize: 14,
-    marginBottom: 8,
-    color: '#495057',
-  },
-  analyticsNote: {
-    fontSize: 12,
-    color: '#6c757d',
-    fontStyle: 'italic',
-    marginTop: 8,
-  },
-  noDataText: {
-    fontSize: 14,
-    color: '#6c757d',
+    opacity: 0.7,
     textAlign: 'center',
-    fontStyle: 'italic',
   },
   footer: {
-    padding: 20,
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    marginTop: 20,
+    padding: 20,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   footerText: {
-    fontSize: 12,
-    color: '#6c757d',
+    fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 18,
+    opacity: 0.7,
     textAlign: 'center',
   },
 });
