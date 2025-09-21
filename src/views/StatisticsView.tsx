@@ -15,14 +15,27 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
   const isTablet = width > 768;
   
   const [stats, setStats] = useState(viewModel.getStatistics());
-  const [analytics, setAnalytics] = useState(viewModel.getGameAnalytics());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(viewModel.isDataLoading());
   
   useEffect(() => {
     const unsubscribe = viewModel.subscribe(() => {
       setStats(viewModel.getStatistics());
-      setAnalytics(viewModel.getGameAnalytics());
+      setIsLoading(viewModel.isDataLoading());
     });
+
+    // If data is still loading, wait for it
+    if (viewModel.isDataLoading()) {
+      const checkLoading = () => {
+        if (!viewModel.isDataLoading()) {
+          setStats(viewModel.getStatistics());
+          setIsLoading(false);
+        } else {
+          setTimeout(checkLoading, 100);
+        }
+      };
+      checkLoading();
+    }
 
     return unsubscribe;
   }, [viewModel]);
@@ -67,7 +80,9 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
       <ThemedView style={styles.content}>
         <ThemedView style={[styles.header, isTablet && styles.headerTablet]}>
           <ThemedText type="title" style={styles.title}>Statistics</ThemedText>
-          <ThemedText style={styles.subtitle}>Your spending game performance</ThemedText>
+          <ThemedText style={styles.subtitle}>
+            {isLoading ? 'Loading statistics...' : 'Your spending game performance'}
+          </ThemedText>
         </ThemedView>
 
         <ThemedView style={styles.statsGrid}>
@@ -94,59 +109,32 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
         </ThemedView>
 
         <ThemedView style={styles.detailsContainer}>
-          <Collapsible title="Game Performance">
-            <ThemedView style={styles.collapsibleContent}>
-              <ThemedText style={styles.detailText}>
-                Average Items per Game: {formattedStats.averageItemsPerGame}
-              </ThemedText>
-              <ThemedText style={styles.detailText}>
-                Favorite Category: {formattedStats.favoriteCategory}
-              </ThemedText>
-              <ThemedText style={styles.detailText}>
-                Most Expensive Item: {formattedStats.mostExpensiveItem}
-              </ThemedText>
-              <ThemedText style={styles.detailText}>
-                Average Item Price: ${analytics.averageItemPrice.toFixed(0)}
-              </ThemedText>
-            </ThemedView>
-          </Collapsible>
-
-          <Collapsible title="Analytics">
-            <ThemedView style={styles.collapsibleContent}>
-              <ThemedText style={styles.detailText}>
-                Completion Percentage: {analytics.completionPercentage.toFixed(1)}%
-              </ThemedText>
-              <ThemedText style={styles.detailText}>
-                Total Items Purchased: {analytics.totalItems}
-              </ThemedText>
-              <ThemedText style={styles.detailText}>
-                Unique Categories: {analytics.uniqueCategories.length}
-              </ThemedText>
-              <ThemedText style={styles.analyticsNote}>
-                Analytics help you understand your spending patterns and improve your strategy.
-              </ThemedText>
-            </ThemedView>
-          </Collapsible>
-
           <Collapsible title="Purchase History">
             <ThemedView style={styles.collapsibleContent}>
-              {stats.gamesPlayed > 0 ? (
-                <ThemedText style={styles.detailText}>
-                  You&apos;ve played {stats.gamesPlayed} games and purchased {stats.totalItemsPurchased} items total.
-                </ThemedText>
+              {stats.totalItemsPurchased > 0 ? (
+                <ThemedView>
+                  <ThemedText style={styles.detailText}>
+                    Total purchases: {stats.totalItemsPurchased} items
+                  </ThemedText>
+                  <ThemedText style={styles.detailText}>
+                    Total money spent: ${stats.totalMoneySpent.toLocaleString()}
+                  </ThemedText>
+                  {stats.gamesPlayed > 0 && (
+                    <ThemedText style={styles.detailText}>
+                      Games completed: {stats.gamesPlayed}
+                    </ThemedText>
+                  )}
+                  {viewModel.getGameState().purchasedItems.length > 0 && (
+                    <ThemedText style={styles.detailText}>
+                      Current game: {viewModel.getGameState().purchasedItems.length} items purchased
+                    </ThemedText>
+                  )}
+                </ThemedView>
               ) : (
                 <ThemedText style={styles.noDataText}>
                   No purchase history yet. Start playing to see your statistics!
                 </ThemedText>
               )}
-            </ThemedView>
-          </Collapsible>
-
-          <Collapsible title="Achievements">
-            <ThemedView style={styles.collapsibleContent}>
-              <ThemedText style={styles.noDataText}>
-                Achievement system coming soon! Keep playing to unlock rewards.
-              </ThemedText>
             </ThemedView>
           </Collapsible>
         </ThemedView>

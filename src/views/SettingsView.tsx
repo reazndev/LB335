@@ -40,14 +40,12 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
           style: 'destructive',
           onPress: async () => {
             await gameViewModel.clearAllData();
-            await statsViewModel.resetStats();
-            await settingsViewModel.resetSettings();
             Alert.alert('Success', 'All data has been reset.');
           },
         },
       ]
     );
-  }, [gameViewModel, statsViewModel, settingsViewModel]);
+  }, [gameViewModel]);
 
   const handleNewGame = useCallback(() => {
     Alert.alert(
