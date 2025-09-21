@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { Modal, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { GameViewModel, SettingsViewModel, StatsViewModel } from '@/src/viewmodels';
 
 interface SettingsViewProps {
@@ -14,9 +16,33 @@ interface SettingsViewProps {
 export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel }: SettingsViewProps) {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
+  const colorScheme = useColorScheme();
   
   const [settings, setSettings] = useState(settingsViewModel.getSettings());
   const [formattedSettings, setFormattedSettings] = useState(settingsViewModel.getFormattedSettings());
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+
+  const showStyledAlert = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setConfirmAction(() => onConfirm || (() => {}));
+    setAlertVisible(true);
+  }, []);
+
+  const hideAlert = useCallback(() => {
+    setAlertVisible(false);
+    setConfirmAction(null);
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    if (confirmAction) {
+      confirmAction();
+    }
+    hideAlert();
+  }, [confirmAction, hideAlert]);
 
   useEffect(() => {
     const unsubscribe = settingsViewModel.subscribe(() => {
@@ -30,40 +56,26 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
   }, [settingsViewModel]);
 
   const handleResetData = useCallback(() => {
-    Alert.alert(
+    showStyledAlert(
       'Reset All Data',
       'This will permanently delete all game progress, statistics, and settings. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            await gameViewModel.clearAllData();
-            Alert.alert('Success', 'All data has been reset.');
-          },
-        },
-      ]
+      async () => {
+        await gameViewModel.clearAllData();
+        showStyledAlert('Success', 'All data has been reset.');
+      }
     );
-  }, [gameViewModel]);
+  }, [gameViewModel, showStyledAlert]);
 
   const handleNewGame = useCallback(() => {
-    Alert.alert(
+    showStyledAlert(
       'Start New Game',
       'This will reset your current game progress but keep your statistics and settings. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Start New Game',
-          style: 'default',
-          onPress: async () => {
-            await gameViewModel.resetGame();
-            Alert.alert('Success', 'New game started! Your statistics and settings have been preserved.');
-          },
-        },
-      ]
+      async () => {
+        await gameViewModel.resetGame();
+        showStyledAlert('Success', 'New game started! Your statistics and settings have been preserved.');
+      }
     );
-  }, [gameViewModel]);
+  }, [gameViewModel, showStyledAlert]);
 
   const ActionButton = ({ 
     title, 
@@ -128,6 +140,41 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
           </ThemedText>
         </ThemedView>
       </ThemedView>
+
+      <Modal
+        visible={alertVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={hideAlert}
+      >
+        <ThemedView style={styles.modalOverlay}>
+          <ThemedView style={[
+            styles.modalContent,
+            { backgroundColor: colorScheme === 'dark' ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)' }
+          ]}>
+            <ThemedText style={[
+              styles.modalTitle,
+              { color: Colors[colorScheme ?? 'light'].text }
+            ]}>
+              {alertTitle}
+            </ThemedText>
+            <ThemedText style={[
+              styles.modalMessage,
+              { color: Colors[colorScheme ?? 'light'].text, opacity: 0.8 }
+            ]}>
+              {alertMessage}
+            </ThemedText>
+            <ThemedView style={styles.modalButtons}>
+              <ThemedView style={[styles.modalButton, styles.cancelButton]} onTouchEnd={hideAlert}>
+                <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
+              </ThemedView>
+              <ThemedView style={[styles.modalButton, styles.confirmButton]} onTouchEnd={handleConfirm}>
+                <ThemedText style={styles.confirmButtonText}>Confirm</ThemedText>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
+        </ThemedView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -234,5 +281,66 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    padding: 25,
+    margin: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#333',
+  },
+  modalMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 25,
+    color: '#666',
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  modalButton: {
+    borderRadius: 10,
+    padding: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  cancelButton: {
+    backgroundColor: '#666',
+  },
+  confirmButton: {
+    backgroundColor: '#4CAF50',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
   },
 });
