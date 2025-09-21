@@ -1,7 +1,3 @@
-// StatsViewModel - MVVM Architecture Implementation
-// Manages statistics data, analytics, and data binding
-
-// import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GameState, PurchaseItem, Statistics } from '../models';
 import { BaseViewModel } from './BaseViewModel';
 
@@ -13,24 +9,17 @@ export class StatsViewModel extends BaseViewModel {
     totalItemsPurchased: 0,
   };
 
-  // MVVM Pattern Methods
 
-  /**
-   * Get current statistics (immutable copy)
-   */
   getStats(): Statistics {
     return { ...this.statistics };
   }
 
-  /**
-   * Update statistics with game result and notify subscribers
-   */
   async updateStats(gameResult: GameState): Promise<void> {
     this.statistics.gamesPlayed += 1;
     this.statistics.totalItemsPurchased += gameResult.purchasedItems.length;
     this.statistics.totalMoneySpent += gameResult.totalSpent;
 
-    // Calculate completion time for completed games
+    
     if (gameResult.gameCompleted && gameResult.endTime) {
       const completionTime = (gameResult.endTime.getTime() - gameResult.startTime.getTime()) / 1000;
       if (!this.statistics.fastestCompletion || completionTime < this.statistics.fastestCompletion) {
@@ -38,38 +27,32 @@ export class StatsViewModel extends BaseViewModel {
       }
     }
 
-    // Update average items per game
+    
     this.statistics.averageItemsPerGame = this.statistics.totalItemsPurchased / this.statistics.gamesPlayed;
 
-    // Update favorite category
+    
     this.updateFavoriteCategory(gameResult.purchasedItems);
 
-    // Update most expensive item
+    
     this.updateMostExpensiveItem(gameResult.purchasedItems);
 
     await this.saveStatistics();
-    this.notifyChange(); // MVVM: Notify subscribers of updated stats
+    this.notifyChange(); 
   }
 
-  /**
-   * Update statistics when a single item is purchased
-   */
   async updateItemPurchase(item: PurchaseItem): Promise<void> {
     this.statistics.totalItemsPurchased += 1;
     this.statistics.totalMoneySpent += item.price;
     
-    // Update most expensive item if necessary
+    
     if (!this.statistics.mostExpensiveItem || item.price > this.statistics.mostExpensiveItem.price) {
       this.statistics.mostExpensiveItem = { ...item };
     }
 
     await this.saveStatistics();
-    this.notifyChange(); // MVVM: Notify subscribers
+    this.notifyChange(); 
   }
 
-  /**
-   * Get formatted statistics for display
-   */
   getFormattedStats(): {
     gamesPlayed: string;
     fastestCompletion: string;
@@ -92,9 +75,6 @@ export class StatsViewModel extends BaseViewModel {
     };
   }
 
-  /**
-   * Get analytics data for advanced statistics
-   */
   getAnalytics(): {
     averageSpendingPerGame: number;
     completionRate: number;
@@ -104,9 +84,9 @@ export class StatsViewModel extends BaseViewModel {
       ? this.statistics.totalMoneySpent / this.statistics.gamesPlayed 
       : 0;
     
-    // For completion rate, we'd need to track attempted vs completed games
-    // For now, using a simple metric based on games played
-    const completionRate = 0; // TODO: Implement proper completion tracking
+    
+    
+    const completionRate = 0; 
     
     const averageGameDuration = this.statistics.fastestCompletion || 0;
 
@@ -117,9 +97,6 @@ export class StatsViewModel extends BaseViewModel {
     };
   }
 
-  /**
-   * Reset all statistics
-   */
   async resetStats(): Promise<void> {
     this.statistics = {
       gamesPlayed: 0,
@@ -129,10 +106,8 @@ export class StatsViewModel extends BaseViewModel {
     };
     
     await this.saveStatistics();
-    this.notifyChange(); // MVVM: Notify subscribers of reset
+    this.notifyChange(); 
   }
-
-  // Private helper methods
 
   private updateFavoriteCategory(purchasedItems: PurchaseItem[]): void {
     const categoryCount: { [key: string]: number } = {};
@@ -161,31 +136,18 @@ export class StatsViewModel extends BaseViewModel {
     }
   }
 
-  // Data Persistence Methods
-
-  /**
-   * Save statistics to persistent storage
-   */
   async saveStatistics(): Promise<void> {
     try {
-      // const jsonValue = JSON.stringify(this.statistics);
-      // await AsyncStorage.setItem('@statistics', jsonValue);
+      
+      
       console.log('Statistics saved (temporarily disabled)');
     } catch (e) {
       console.error('Failed to save statistics', e);
     }
   }
 
-  /**
-   * Load statistics from persistent storage
-   */
   async loadStatistics(): Promise<void> {
     try {
-      // const jsonValue = await AsyncStorage.getItem('@statistics');
-      // if (jsonValue != null) {
-      //   this.statistics = JSON.parse(jsonValue);
-      //   this.notifyChange(); // MVVM: Notify subscribers of loaded data
-      // }
       console.log('Statistics loaded (temporarily disabled)');
     } catch (e) {
       console.error('Failed to load statistics', e);

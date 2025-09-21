@@ -1,87 +1,54 @@
 import * as Haptics from 'expo-haptics';
-import { Accelerometer } from 'expo-sensors';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Dimensions, PanResponder, StyleSheet, Vibration } from 'react-native';
+import { Alert, FlatList, StyleSheet, Vibration } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { PurchaseItem } from '@/src/models';
+import { GameState, PurchaseItem } from '@/src/models';
 import { GameViewModel } from '@/src/viewmodels';
-
-const { width } = Dimensions.get('window');
 
 interface MainGameViewProps {
   viewModel: GameViewModel;
 }
 
 export function MainGameView({ viewModel }: MainGameViewProps) {
-  const [currentItem, setCurrentItem] = useState<PurchaseItem>(viewModel.getRandomItem());
-  const [gameState, setGameState] = useState(viewModel.getGameState());
+  const [gameState, setGameState] = useState<GameState>(viewModel.getGameState());
+  const [allItems, setAllItems] = useState<PurchaseItem[]>(viewModel.getAllItems());
+  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(viewModel.isDataLoaded());
 
-  const handleShakePurchase = useCallback(async () => {
-    const randomItem = viewModel.getRandomItem();
-    setCurrentItem(randomItem);
-
-    if (viewModel.purchaseItem(randomItem)) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      Vibration.vibrate(200);
-
-      if (viewModel.isGameCompleted()) {
-        Alert.alert(
-          'Congratulations!',
-          'You\'ve spent exactly $100 billion! Game completed!',
-          [{ text: 'OK' }]
-        );
-      }
-    } else {
+  const hapticPatterns = {
+    purchase: async () => {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Vibration.vibrate(100);
+    },
+    gameComplete: async () => {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Vibration.vibrate([200, 100, 200, 100, 200, 100, 500]); 
+    },
+    error: async () => {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Cannot afford this item', 'You don\'t have enough money for this purchase.');
-    }
-  }, [viewModel]);
+      Vibration.vibrate([100, 50, 100]); 
+    },
+  };
 
-  // Subscribe to ViewModel changes
   useEffect(() => {
     const unsubscribe = viewModel.subscribe(() => {
       setGameState(viewModel.getGameState());
+      setIsDataLoaded(viewModel.isDataLoaded());
     });
     return unsubscribe;
   }, [viewModel]);
 
-  // Accelerometer setup for shake-to-buy
   useEffect(() => {
-    let lastShake = 0;
-    const SHAKE_THRESHOLD = 1.5;
-    const SHAKE_TIMEOUT = 1000;
+    setIsDataLoaded(viewModel.isDataLoaded());
+  }, [viewModel]);
 
-    const subscribe = Accelerometer.addListener(accelerometerData => {
-      const { x, y, z } = accelerometerData;
-      const acceleration = Math.sqrt(x * x + y * y + z * z);
-
-      if (acceleration > SHAKE_THRESHOLD) {
-        const now = Date.now();
-        if (now - lastShake > SHAKE_TIMEOUT) {
-          lastShake = now;
-          handleShakePurchase();
-        }
-      }
-    });
-
-    Accelerometer.setUpdateInterval(100);
-
-    return () => {
-      subscribe?.remove();
-    };
-  }, [handleShakePurchase]);
-
-  const handlePurchase = useCallback(async () => {
-    if (viewModel.purchaseItem(currentItem)) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      Vibration.vibrate(100);
-
-      // Get next random item
-      setCurrentItem(viewModel.getRandomItem());
+  const handlePurchase = useCallback(async (item: PurchaseItem) => {
+    if (viewModel.purchaseItem(item)) {
+      await hapticPatterns.purchase();
 
       if (viewModel.isGameCompleted()) {
+        await hapticPatterns.gameComplete();
         Alert.alert(
           'Congratulations!',
           'You\'ve spent exactly $100 billion! Game completed!',
@@ -89,24 +56,10 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
         );
       }
     } else {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await hapticPatterns.error();
       Alert.alert('Cannot afford this item', 'You don\'t have enough money for this purchase.');
     }
-  }, [viewModel, currentItem]);
-
-  // PanResponder for swipe gestures
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onPanResponderRelease: (evt, gestureState) => {
-      const { dx } = gestureState;
-      const SWIPE_THRESHOLD = 100;
-
-      if (Math.abs(dx) > SWIPE_THRESHOLD) {
-        setCurrentItem(viewModel.getRandomItem());
-        Haptics.selectionAsync();
-      }
-    },
-  });
+  }, [viewModel]);
 
   const formatCurrency = (amount: number): string => {
     if (amount >= 1000000000) {
@@ -118,6 +71,53 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
     }
     return `$${amount.toLocaleString()}`;
   };
+
+  const renderItem = ({ item }: { item: PurchaseItem }) => {
+    const ownedCount = viewModel.getOwnedItemCount(item.id);
+    const canAfford = viewModel.canAffordItem(item);
+
+    return (
+      <ThemedView style={styles.itemCard}>
+        <ThemedText style={styles.itemName}>{item.name}</ThemedText>
+        <ThemedText style={styles.itemPrice}>
+          {formatCurrency(item.price)}
+        </ThemedText>
+        <ThemedText style={styles.itemDescription}>
+          {item.description}
+        </ThemedText>
+        <ThemedText style={styles.itemCategory}>
+          Category: {item.category}
+        </ThemedText>
+        <ThemedText style={styles.ownedCount}>
+          Owned: {ownedCount}
+        </ThemedText>
+        <ThemedView
+          style={[
+            styles.purchaseButton,
+            !canAfford && styles.disabledButton
+          ]}
+          onTouchEnd={() => handlePurchase(item)}
+        >
+          <ThemedText style={styles.purchaseButtonText}>
+            Buy Item
+          </ThemedText>
+        </ThemedView>
+      </ThemedView>
+    );
+  };
+
+  if (!isDataLoaded) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedView style={styles.loadingContainer}>
+          <ThemedText style={styles.loadingText}>Loading game data...</ThemedText>
+          <ThemedText style={styles.loadingSubtext}>
+            Restoring your progress
+          </ThemedText>
+        </ThemedView>
+      </ThemedView>
+    );
+  }
 
   if (gameState.gameCompleted) {
     return (
@@ -142,7 +142,6 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Budget Display */}
       <ThemedView style={styles.budgetContainer}>
         <ThemedText style={styles.budgetLabel}>Remaining Budget</ThemedText>
         <ThemedText style={styles.budgetAmount}>
@@ -153,40 +152,16 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
         </ThemedText>
       </ThemedView>
 
-      {/* Item Display with Swipe Gesture */}
-      <ThemedView style={styles.itemContainer} {...panResponder.panHandlers}>
-        <ThemedView style={styles.itemCard}>
-          <ThemedText style={styles.itemName}>{currentItem.name}</ThemedText>
-          <ThemedText style={styles.itemPrice}>
-            {formatCurrency(currentItem.price)}
-          </ThemedText>
-          <ThemedText style={styles.itemDescription}>
-            {currentItem.description}
-          </ThemedText>
-          <ThemedText style={styles.itemCategory}>
-            Category: {currentItem.category}
-          </ThemedText>
-        </ThemedView>
+      <FlatList
+        data={allItems}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        style={styles.itemsList}
+        showsVerticalScrollIndicator={true}
+        extraData={gameState.purchasedItems.length}
+      />
 
-        <ThemedText style={styles.swipeHint}>
-          Swipe left/right for new item • Shake device to buy randomly
-        </ThemedText>
-      </ThemedView>
-
-      {/* Purchase Controls */}
       <ThemedView style={styles.controlsContainer}>
-        <ThemedView
-          style={[
-            styles.purchaseButton,
-            !viewModel.canAffordItem(currentItem) && styles.disabledButton
-          ]}
-          onTouchEnd={handlePurchase}
-        >
-          <ThemedText style={styles.purchaseButtonText}>
-            Buy This Item
-          </ThemedText>
-        </ThemedView>
-
         <ThemedView style={styles.resetButton} onTouchEnd={() => {
           Alert.alert(
             'Reset Game',
@@ -195,7 +170,6 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
               { text: 'Cancel', style: 'cancel' },
               { text: 'Reset', onPress: () => {
                 viewModel.resetGame();
-                setCurrentItem(viewModel.getRandomItem());
               }}
             ]
           );
@@ -212,9 +186,23 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  loadingSubtext: {
+    fontSize: 16,
+    opacity: 0.7,
+  },
   budgetContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
     padding: 20,
     borderRadius: 10,
     shadowColor: '#000',
@@ -236,69 +224,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     opacity: 0.8,
   },
-  itemContainer: {
+  itemsList: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginBottom: 20,
   },
   itemCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 15,
-    padding: 30,
-    width: width * 0.9,
-    alignItems: 'center',
+    padding: 20,
+    marginVertical: 5,
+    marginHorizontal: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   itemName: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   itemPrice: {
-    fontSize: 24,
+    fontSize: 18,
     color: '#4CAF50',
     fontWeight: 'bold',
-    marginBottom: 15,
+    marginBottom: 10,
+    textAlign: 'center',
   },
   itemDescription: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
-    marginBottom: 10,
-    lineHeight: 22,
+    marginBottom: 8,
+    lineHeight: 20,
   },
   itemCategory: {
-    fontSize: 14,
+    fontSize: 12,
     opacity: 0.7,
     textTransform: 'capitalize',
-  },
-  swipeHint: {
-    fontSize: 14,
     textAlign: 'center',
-    marginTop: 20,
-    opacity: 0.6,
+    marginBottom: 10,
   },
-  controlsContainer: {
-    marginTop: 30,
+  ownedCount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 15,
   },
   purchaseButton: {
     backgroundColor: '#4CAF50',
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 8,
+    padding: 12,
     alignItems: 'center',
-    marginBottom: 15,
   },
   disabledButton: {
     backgroundColor: '#cccccc',
   },
   purchaseButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: 'white',
+  },
+  controlsContainer: {
+    marginTop: 10,
   },
   resetButton: {
     backgroundColor: '#f44336',

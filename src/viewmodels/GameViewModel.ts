@@ -1,14 +1,13 @@
-// GameViewModel - MVVM Architecture Implementation
-// Manages game state, business logic, and data binding
-
-// import AsyncStorage from 'react-native';
-import { GameState, ItemCategory, PurchaseItem } from '../models';
+// @ts-ignore
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GameState, ItemCategory, PurchaseItem, Statistics } from '../models';
 import { BaseViewModel } from './BaseViewModel';
 
 export class GameViewModel extends BaseViewModel {
   private gameState: GameState;
+  private statistics: Statistics;
+  private isLoading: boolean = true;
   private availableItems: PurchaseItem[] = [
-    // Food & Drinks
     {
       id: 'big_mac',
       name: 'Big Mac',
@@ -336,47 +335,38 @@ export class GameViewModel extends BaseViewModel {
   constructor() {
     super();
     this.gameState = {
-      currentBudget: 100000000000, // 100 billion (like Bill Gates)
+      currentBudget: 100000000000,
       purchasedItems: [],
       totalSpent: 0,
       gameCompleted: false,
       startTime: new Date(),
     };
+    this.statistics = {
+      gamesPlayed: 0,
+      averageItemsPerGame: 0,
+      totalMoneySpent: 0,
+      totalItemsPurchased: 0,
+    };
+    this.initializeData();
   }
 
-  // MVVM Pattern Methods - Enhanced for proper data binding
-
-  /**
-   * Get current game state (immutable copy)
-   */
   getGameState(): GameState {
     return { ...this.gameState };
   }
 
-  /**
-   * Get all available items (immutable copy)
-   */
   getAllItems(): PurchaseItem[] {
     return [...this.availableItems];
   }
 
-  /**
-   * Get items by category
-   */
+
   getItemsByCategory(category: ItemCategory): PurchaseItem[] {
     return this.availableItems.filter(item => item.category === category);
   }
 
-  /**
-   * Get current item for single-item view (deprecated, keeping for compatibility)
-   */
   getCurrentItem(): PurchaseItem {
     return this.availableItems[0];
   }
 
-  /**
-   * Purchase an item with proper MVVM notifications
-   */
   purchaseItem(item: PurchaseItem): boolean {
     if (this.gameState.currentBudget >= item.price) {
       this.gameState.currentBudget -= item.price;
@@ -386,18 +376,16 @@ export class GameViewModel extends BaseViewModel {
       if (this.gameState.currentBudget === 0) {
         this.gameState.gameCompleted = true;
         this.gameState.endTime = new Date();
+        this.updateStatisticsOnCompletion(); // Update statistics on completion
       }
 
       this.saveGameState();
-      this.notifyChange(); // MVVM: Notify subscribers of state change
+      this.notifyChange(); 
       return true;
     }
     return false;
   }
 
-  /**
-   * Sell an item with proper MVVM notifications
-   */
   sellItem(item: PurchaseItem): boolean {
     const ownedItemIndex = this.gameState.purchasedItems.findIndex(
       purchasedItem => purchasedItem.id === item.id
@@ -410,58 +398,37 @@ export class GameViewModel extends BaseViewModel {
       this.gameState.gameCompleted = false;
       
       this.saveGameState();
-      this.notifyChange(); // MVVM: Notify subscribers of state change
+      this.notifyChange();
       return true;
     }
     return false;
   }
 
-  /**
-   * Get count of owned items by ID
-   */
   getOwnedItemCount(itemId: string): number {
     return this.gameState.purchasedItems.filter(item => item.id === itemId).length;
   }
 
-  /**
-   * Check if item can be afforded
-   */
   canAffordItem(item: PurchaseItem): boolean {
     return this.gameState.currentBudget >= item.price;
   }
 
-  /**
-   * Get remaining budget
-   */
   getRemainingBudget(): number {
     return this.gameState.currentBudget;
   }
 
-  /**
-   * Get total spent
-   */
   getTotalSpent(): number {
     return this.gameState.totalSpent;
   }
 
-  /**
-   * Check if game is completed
-   */
   isGameCompleted(): boolean {
     return this.gameState.gameCompleted;
   }
 
-  /**
-   * Get random item for shake-to-buy feature
-   */
   getRandomItem(): PurchaseItem {
     const randomIndex = Math.floor(Math.random() * this.availableItems.length);
     return { ...this.availableItems[randomIndex] };
   }
 
-  /**
-   * Reset game with proper MVVM notifications
-   */
   resetGame(): void {
     this.gameState = {
       currentBudget: 100000000000, // 100 billion
@@ -471,12 +438,9 @@ export class GameViewModel extends BaseViewModel {
       startTime: new Date(),
     };
     this.saveGameState();
-    this.notifyChange(); // MVVM: Notify subscribers of state change
+    this.notifyChange();
   }
 
-  /**
-   * Get game statistics for analytics
-   */
   getGameAnalytics(): {
     totalItems: number;
     uniqueCategories: string[];
@@ -502,40 +466,133 @@ export class GameViewModel extends BaseViewModel {
     };
   }
 
-  // Data Persistence Methods (Enhanced for MVVM)
+  private async initializeData(): Promise<void> {
+    try {
+      await Promise.all([
+        this.loadGameState(),
+        this.loadStatistics(),
+      ]);
+      this.isLoading = false;
+      this.notifyChange();
+    } catch (error) {
+      console.error('Failed to initialize data:', error);
+      this.isLoading = false;
+      this.notifyChange();
+    }
+  }
 
-  /**
-   * Save game state to persistent storage
-   */
+  isDataLoading(): boolean {
+    return this.isLoading;
+  }
+
+  isDataLoaded(): boolean {
+    return !this.isLoading;
+  }
+
   async saveGameState(): Promise<void> {
     try {
-      // const jsonValue = JSON.stringify(this.gameState);
-      // await AsyncStorage.setItem('@gameState', jsonValue);
-      console.log('Game state saved (temporarily disabled)');
+      const gameStateToSave = {
+        ...this.gameState,
+        startTime: this.gameState.startTime.toISOString(),
+        endTime: this.gameState.endTime?.toISOString(),
+      };
+      const jsonValue = JSON.stringify(gameStateToSave);
+      await AsyncStorage.setItem('@gameState', jsonValue);
+      console.log('Game state saved successfully');
     } catch (e) {
       console.error('Failed to save game state', e);
       // Could emit error event for UI to handle
     }
   }
 
-  /**
-   * Load game state from persistent storage
-   */
   async loadGameState(): Promise<void> {
     try {
-      // const jsonValue = await AsyncStorage.getItem('@gameState');
-      // if (jsonValue != null) {
-      //   this.gameState = JSON.parse(jsonValue);
-      //   // Convert date strings back to Date objects
-      //   this.gameState.startTime = new Date(this.gameState.startTime);
-      //   if (this.gameState.endTime) {
-      //     this.gameState.endTime = new Date(this.gameState.endTime);
-      //   }
-      //   this.notifyChange(); // MVVM: Notify subscribers of loaded state
-      // }
-      console.log('Game state loaded (temporarily disabled)');
+      const jsonValue = await AsyncStorage.getItem('@gameState');
+      if (jsonValue != null) {
+        const loadedState = JSON.parse(jsonValue);
+        this.gameState = {
+          ...loadedState,
+          startTime: new Date(loadedState.startTime),
+          endTime: loadedState.endTime ? new Date(loadedState.endTime) : undefined,
+        };
+        console.log('Game state loaded successfully');
+      }
     } catch (e) {
       console.error('Failed to load game state', e);
+    }
+  }
+
+  async saveStatistics(): Promise<void> {
+    try {
+      const jsonValue = JSON.stringify(this.statistics);
+      await AsyncStorage.setItem('@gameStatistics', jsonValue);
+      console.log('Statistics saved successfully');
+    } catch (e) {
+      console.error('Failed to save statistics', e);
+    }
+  }
+
+  async loadStatistics(): Promise<void> {
+    try {
+      const jsonValue = await AsyncStorage.getItem('@gameStatistics');
+      if (jsonValue != null) {
+        this.statistics = JSON.parse(jsonValue);
+        console.log('Statistics loaded successfully');
+      }
+    } catch (e) {
+      console.error('Failed to load statistics', e);
+    }
+  }
+
+  getStatistics(): Statistics {
+    return { ...this.statistics };
+  }
+
+  private async updateStatisticsOnCompletion(): Promise<void> {
+    if (this.gameState.gameCompleted && this.gameState.endTime && this.gameState.startTime) {
+      const completionTime = Math.round((this.gameState.endTime.getTime() - this.gameState.startTime.getTime()) / 1000);
+
+      this.statistics.gamesPlayed += 1;
+      this.statistics.totalMoneySpent += this.gameState.totalSpent;
+      this.statistics.totalItemsPurchased += this.gameState.purchasedItems.length;
+
+      if (!this.statistics.fastestCompletion || completionTime < this.statistics.fastestCompletion) {
+        this.statistics.fastestCompletion = completionTime;
+      }
+
+      this.statistics.averageItemsPerGame = this.statistics.totalItemsPurchased / this.statistics.gamesPlayed;
+
+      const categoryCounts = this.gameState.purchasedItems.reduce((acc, item) => {
+        acc[item.category] = (acc[item.category] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const favoriteCategory = Object.entries(categoryCounts).reduce((a, b) =>
+        categoryCounts[a[0]] > categoryCounts[b[0]] ? a : b
+      )?.[0];
+
+      if (favoriteCategory) {
+        this.statistics.favoriteCategory = favoriteCategory;
+      }
+
+      const mostExpensive = this.gameState.purchasedItems.reduce((max, item) =>
+        max && max.price > item.price ? max : item, null as PurchaseItem | null
+      );
+
+      if (mostExpensive && (!this.statistics.mostExpensiveItem || mostExpensive.price > this.statistics.mostExpensiveItem.price)) {
+        this.statistics.mostExpensiveItem = mostExpensive;
+      }
+
+      await this.saveStatistics();
+    }
+  }
+
+  async clearAllData(): Promise<void> {
+    try {
+      await AsyncStorage.multiRemove(['@gameState', '@gameStatistics']);
+      console.log('All data cleared');
+    } catch (e) {
+      console.error('Failed to clear data', e);
     }
   }
 }

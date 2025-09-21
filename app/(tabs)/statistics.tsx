@@ -3,13 +3,13 @@
 
 import { useState } from 'react';
 
-import { StatsViewModel } from '@/src/viewmodels';
+import { GameViewModel } from '@/src/viewmodels';
 import { StatisticsView } from '@/src/views';
 
 export default function StatisticsScreen() {
   // MVVM: Initialize ViewModel once per screen instance
-  const [statsViewModel] = useState(() => new StatsViewModel());
+  const [gameViewModel] = useState(() => new GameViewModel());
 
   // MVVM: Pass ViewModel to View component for proper separation
-  return <StatisticsView viewModel={statsViewModel} />;
+  return <StatisticsView viewModel={gameViewModel} />;
 }

@@ -1,49 +1,53 @@
-// StatisticsView - MVVM View Component
-// Handles UI display for statistics and analytics
-// Demonstrates proper data binding and separation of concerns
-
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
-import { StatsViewModel } from '@/src/viewmodels';
+import { GameViewModel } from '@/src/viewmodels';
 
 interface StatisticsViewProps {
-  viewModel: StatsViewModel;
+  viewModel: GameViewModel;
 }
 
 export function StatisticsView({ viewModel }: StatisticsViewProps) {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
   
-  // MVVM: Local state for UI, business logic in ViewModel
-  const [stats, setStats] = useState(viewModel.getStats());
-  const [formattedStats, setFormattedStats] = useState(viewModel.getFormattedStats());
-  const [analytics, setAnalytics] = useState(viewModel.getAnalytics());
+  const [stats, setStats] = useState(viewModel.getStatistics());
+  const [analytics, setAnalytics] = useState(viewModel.getGameAnalytics());
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // MVVM: Subscribe to ViewModel changes
+  
   useEffect(() => {
     const unsubscribe = viewModel.subscribe(() => {
-      setStats(viewModel.getStats());
-      setFormattedStats(viewModel.getFormattedStats());
-      setAnalytics(viewModel.getAnalytics());
+      setStats(viewModel.getStatistics());
+      setAnalytics(viewModel.getGameAnalytics());
     });
 
-    // Load initial data
-    viewModel.loadStatistics();
-    
     return unsubscribe;
   }, [viewModel]);
 
-  // UI Event Handlers
+  
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await viewModel.loadStatistics();
-    setIsRefreshing(false);
-  }, [viewModel]);
+    
+    setTimeout(() => setIsRefreshing(false), 500);
+  }, []);
+
+  
+  const getFormattedStats = () => ({
+    gamesPlayed: stats.gamesPlayed.toString(),
+    fastestCompletion: stats.fastestCompletion 
+      ? `${Math.round(stats.fastestCompletion)}s` 
+      : 'N/A',
+    averageItemsPerGame: stats.averageItemsPerGame.toFixed(1),
+    favoriteCategory: stats.favoriteCategory || 'N/A',
+    totalMoneySpent: `$${stats.totalMoneySpent.toLocaleString()}`,
+    totalItemsPurchased: stats.totalItemsPurchased.toString(),
+    mostExpensiveItem: stats.mostExpensiveItem?.name || 'N/A'
+  });
+
+  const formattedStats = getFormattedStats();
 
   const StatCard = ({ title, value, description }: { title: string; value: string; description?: string }) => (
     <ThemedView style={[styles.statCard, isTablet && styles.statCardTablet]}>
@@ -61,13 +65,11 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
       }
     >
       <ThemedView style={styles.content}>
-        {/* Header */}
         <ThemedView style={[styles.header, isTablet && styles.headerTablet]}>
           <ThemedText type="title" style={styles.title}>Statistics</ThemedText>
           <ThemedText style={styles.subtitle}>Your spending game performance</ThemedText>
         </ThemedView>
 
-        {/* Main Statistics Grid */}
         <ThemedView style={[styles.statsGrid, isTablet && styles.statsGridTablet]}>
           <StatCard 
             title="Games Played" 
@@ -91,7 +93,6 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
           />
         </ThemedView>
 
-        {/* Detailed Statistics */}
         <ThemedView style={styles.detailsContainer}>
           <Collapsible title="Game Performance">
             <ThemedView style={styles.collapsibleContent}>
@@ -105,7 +106,7 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
                 Most Expensive Item: {formattedStats.mostExpensiveItem}
               </ThemedText>
               <ThemedText style={styles.detailText}>
-                Average Spending per Game: ${analytics.averageSpendingPerGame.toLocaleString()}
+                Average Item Price: ${analytics.averageItemPrice.toFixed(0)}
               </ThemedText>
             </ThemedView>
           </Collapsible>
@@ -113,10 +114,13 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
           <Collapsible title="Analytics">
             <ThemedView style={styles.collapsibleContent}>
               <ThemedText style={styles.detailText}>
-                Completion Rate: {analytics.completionRate.toFixed(1)}%
+                Completion Percentage: {analytics.completionPercentage.toFixed(1)}%
               </ThemedText>
               <ThemedText style={styles.detailText}>
-                Average Game Duration: {analytics.averageGameDuration.toFixed(0)}s
+                Total Items Purchased: {analytics.totalItems}
+              </ThemedText>
+              <ThemedText style={styles.detailText}>
+                Unique Categories: {analytics.uniqueCategories.length}
               </ThemedText>
               <ThemedText style={styles.analyticsNote}>
                 Analytics help you understand your spending patterns and improve your strategy.
@@ -147,7 +151,6 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
           </Collapsible>
         </ThemedView>
 
-        {/* Footer */}
         <ThemedView style={styles.footer}>
           <ThemedText style={styles.footerText}>
             Statistics update in real-time as you play. Pull down to refresh.

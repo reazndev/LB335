@@ -1,7 +1,3 @@
-// SettingsView - MVVM View Component
-// Handles UI display and user interactions for app settings
-// Demonstrates proper event handling and data binding
-
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, useWindowDimensions } from 'react-native';
 
@@ -20,24 +16,20 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
   
-  // MVVM: Local state for UI, business logic in ViewModel
   const [settings, setSettings] = useState(settingsViewModel.getSettings());
   const [formattedSettings, setFormattedSettings] = useState(settingsViewModel.getFormattedSettings());
 
-  // MVVM: Subscribe to ViewModel changes
   useEffect(() => {
     const unsubscribe = settingsViewModel.subscribe(() => {
       setSettings(settingsViewModel.getSettings());
       setFormattedSettings(settingsViewModel.getFormattedSettings());
     });
 
-    // Load initial settings
     settingsViewModel.loadSettings();
     
     return unsubscribe;
   }, [settingsViewModel]);
 
-  // UI Event Handlers (delegate to ViewModel)
   const handleSoundToggle = useCallback(async (value: boolean) => {
     await settingsViewModel.setSoundEnabled(value);
   }, [settingsViewModel]);
@@ -149,13 +141,11 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
   return (
     <ScrollView style={styles.container}>
       <ThemedView style={styles.content}>
-        {/* Header */}
         <ThemedView style={[styles.header, isTablet && styles.headerTablet]}>
           <ThemedText type="title" style={styles.title}>Settings</ThemedText>
           <ThemedText style={styles.subtitle}>Configure your app experience</ThemedText>
         </ThemedView>
 
-        {/* Sound & Haptics */}
         <Collapsible title="Sound & Haptics">
           <ThemedView style={styles.collapsibleContent}>
             <SettingRow
@@ -173,7 +163,6 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
           </ThemedView>
         </Collapsible>
 
-        {/* Accessibility */}
         <Collapsible title="Accessibility">
           <ThemedView style={styles.collapsibleContent}>
             <SettingRow
@@ -197,7 +186,6 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
           </ThemedView>
         </Collapsible>
 
-        {/* App Information */}
         <Collapsible title="App Information">
           <ThemedView style={styles.collapsibleContent}>
             <ThemedView style={styles.infoRow}>
@@ -214,7 +202,6 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
           </ThemedView>
         </Collapsible>
 
-        {/* Data Management */}
         <Collapsible title="Data Management">
           <ThemedView style={styles.collapsibleContent}>
             <ThemedText style={styles.dataDescription}>
@@ -234,12 +221,11 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
             />
             
             <ThemedText style={styles.warningText}>
-              ⚠️ Reset All Data will permanently delete your game progress, statistics, and settings.
+              Reset All Data will permanently delete your game progress, statistics, and settings.
             </ThemedText>
           </ThemedView>
         </Collapsible>
 
-        {/* Footer */}
         <ThemedView style={styles.footer}>
           <ThemedText style={styles.footerText}>
             Billion Dollar Challenge v1.0.0{'\n'}
