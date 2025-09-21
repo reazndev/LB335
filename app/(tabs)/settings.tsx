@@ -1,73 +1,23 @@
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StyleSheet, useWindowDimensions } from 'react-native';
+// Settings Tab Screen - MVVM Architecture Integration
+// Acts as a container that initializes ViewModels and passes them to Views
 
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useState } from 'react';
+
+import { GameViewModel, SettingsViewModel, StatsViewModel } from '@/src/viewmodels';
+import { SettingsView } from '@/src/views';
 
 export default function SettingsScreen() {
-  const { width } = useWindowDimensions();
-  const isTablet = width > 768;
+  // MVVM: Initialize ViewModels once per screen instance
+  const [settingsViewModel] = useState(() => new SettingsViewModel());
+  const [gameViewModel] = useState(() => new GameViewModel());
+  const [statsViewModel] = useState(() => new StatsViewModel());
 
-  const resetData = async () => {
-    // await AsyncStorage.clear();
-    alert('Data reset (temporarily disabled)');
-  };
-
+  // MVVM: Pass ViewModels to View component for proper separation
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="gear"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={[styles.titleContainer, isTablet && styles.titleContainerTablet]}>
-        <ThemedText type="title">Settings</ThemedText>
-      </ThemedView>
-      <ThemedText>Configure your app preferences here.</ThemedText>
-      <Collapsible title="Accessibility">
-        <ThemedText>Settings for screen readers and alternative inputs.</ThemedText>
-      </Collapsible>
-      <Collapsible title="Sound & Vibration">
-        <ThemedText>Control haptic feedback and sound effects.</ThemedText>
-      </Collapsible>
-      <Collapsible title="Reset Data">
-        <ThemedText>Clear all game data and statistics.</ThemedText>
-        <ThemedView style={styles.button} onTouchEnd={resetData}>
-          <ThemedText>Reset All Data</ThemedText>
-        </ThemedView>
-      </Collapsible>
-    </ParallaxScrollView>
+    <SettingsView 
+      settingsViewModel={settingsViewModel}
+      gameViewModel={gameViewModel}
+      statsViewModel={statsViewModel}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  titleContainerTablet: {
-    justifyContent: 'center',
-  },
-  button: {
-    minHeight: 44,
-    padding: 12,
-    backgroundColor: '#FF3B30',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-});

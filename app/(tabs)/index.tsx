@@ -3,22 +3,14 @@
 // Demonstrates proper MVVM separation where the tab screen coordinates components
 
 import { useState } from 'react';
-import { Text, View } from 'react-native';
 
 import { GameViewModel } from '@/src/viewmodels';
+import { MainGameView } from '@/src/views';
 
 export default function GameScreen() {
   // MVVM: Initialize ViewModel once per screen instance
   const [gameViewModel] = useState(() => new GameViewModel());
 
-  // For debugging, let's try a simple view first
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0' }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold' }}>Game Tab</Text>
-      <Text>Testing if tab is accessible</Text>
-    </View>
-  );
-
   // MVVM: Pass ViewModel to View component for proper separation
-  // return <MainGameView viewModel={gameViewModel} />;
+  return <MainGameView viewModel={gameViewModel} />;
 }
