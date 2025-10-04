@@ -135,8 +135,7 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
 
         <ThemedView style={styles.footer}>
           <ThemedText style={styles.footerText}>
-            Billion Dollar Challenge v1.0.0{'\n'}
-            MVVM Architecture Implementation
+            LB335 - Florian Ruby
           </ThemedText>
         </ThemedView>
       </ThemedView>

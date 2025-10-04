@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useEffect, useState } from 'react';
+import { Accelerometer } from 'expo-sensors';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Modal, StyleSheet, Vibration } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -60,13 +61,47 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
     setIsDataLoaded(viewModel.isDataLoaded());
   }, [viewModel]);
 
+  useEffect(() => {
+    let lastShakeTime = 0;
+    const SHAKE_THRESHOLD = 1.5;
+    const SHAKE_COOLDOWN = 1000;
+
+    Accelerometer.setUpdateInterval(100);
+    
+    const subscription = Accelerometer.addListener(({ x, y, z }) => {
+      const acceleration = Math.sqrt(x * x + y * y + z * z);
+      const now = Date.now();
+      
+      if (acceleration > SHAKE_THRESHOLD && now - lastShakeTime > SHAKE_COOLDOWN) {
+        lastShakeTime = now;
+        handleShake();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [gameState.purchasedItems]);
+
+  const handleShake = async () => {
+    if (gameState.purchasedItems.length > 0) {
+      const lastItem = gameState.purchasedItems[gameState.purchasedItems.length - 1];
+      const success = viewModel.sellItem(lastItem);
+      
+      if (success) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Vibration.vibrate(50); // Short vibration feedback
+        showStyledAlert('Undo Successful', `Returned: ${lastItem.name} (+$${lastItem.price.toLocaleString()})`);
+      }
+    }
+  };
+
   const handlePurchase = useCallback(async (item: PurchaseItem) => {
     if (viewModel.purchaseItem(item)) {
       await hapticPatterns.purchase();
 
       if (viewModel.isGameCompleted()) {
         await hapticPatterns.gameComplete();
-        // Removed default Alert popup - now shows congratulations screen instead
       }
     } else {
       await hapticPatterns.error();
