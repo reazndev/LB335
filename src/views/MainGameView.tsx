@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useOrientation } from '@/hooks/use-orientation';
 import { GameState, PurchaseItem } from '@/src/models';
 import { GameViewModel } from '@/src/viewmodels';
 
@@ -23,6 +24,8 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
   const [alertMessage, setAlertMessage] = useState('');
   
   const colorScheme = useColorScheme();
+  const orientation = useOrientation();
+  const isLandscape = orientation === 'landscape';
 
   const showStyledAlert = useCallback((title: string, message: string) => {
     setAlertTitle(title);
@@ -125,7 +128,10 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
     const canAfford = viewModel.canAffordItem(item);
 
     return (
-      <ThemedView style={styles.itemCard}>
+      <ThemedView style={[
+        styles.itemCard,
+        isLandscape && styles.itemCardLandscape
+      ]}>
         <ThemedText style={styles.itemName}>{item.name}</ThemedText>
         <ThemedText style={styles.itemPrice}>
           {formatCurrency(item.price)}
@@ -193,24 +199,57 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedView style={styles.budgetContainer}>
-        <ThemedText style={styles.budgetLabel}>Remaining Budget</ThemedText>
-        <ThemedText style={styles.budgetAmount}>
-          {formatCurrency(gameState.currentBudget)}
-        </ThemedText>
-        <ThemedText style={styles.totalSpent}>
-          Total Spent: {formatCurrency(gameState.totalSpent)}
-        </ThemedText>
-      </ThemedView>
+      {isLandscape ? (
+        // Landscape layout: Budget on left, items list on right
+        <ThemedView style={styles.landscapeContainer}>
+          <ThemedView style={styles.landscapeBudgetContainer}>
+            <ThemedView style={styles.budgetContainer}>
+              <ThemedText style={styles.budgetLabel}>Remaining Budget</ThemedText>
+              <ThemedText style={styles.budgetAmount}>
+                {formatCurrency(gameState.currentBudget)}
+              </ThemedText>
+              <ThemedText style={styles.totalSpent}>
+                Total Spent: {formatCurrency(gameState.totalSpent)}
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
+          
+          <ThemedView style={styles.landscapeListContainer}>
+            <FlatList
+              data={allItems}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              style={styles.itemsList}
+              showsVerticalScrollIndicator={true}
+              extraData={gameState.purchasedItems.length}
+              numColumns={2}
+              columnWrapperStyle={styles.landscapeRow}
+            />
+          </ThemedView>
+        </ThemedView>
+      ) : (
+        // Portrait layout: Budget on top, items list below
+        <>
+          <ThemedView style={styles.budgetContainer}>
+            <ThemedText style={styles.budgetLabel}>Remaining Budget</ThemedText>
+            <ThemedText style={styles.budgetAmount}>
+              {formatCurrency(gameState.currentBudget)}
+            </ThemedText>
+            <ThemedText style={styles.totalSpent}>
+              Total Spent: {formatCurrency(gameState.totalSpent)}
+            </ThemedText>
+          </ThemedView>
 
-      <FlatList
-        data={allItems}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        style={styles.itemsList}
-        showsVerticalScrollIndicator={true}
-        extraData={gameState.purchasedItems.length}
-      />
+          <FlatList
+            data={allItems}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            style={styles.itemsList}
+            showsVerticalScrollIndicator={true}
+            extraData={gameState.purchasedItems.length}
+          />
+        </>
+      )}
 
       <Modal
         visible={alertVisible}
@@ -250,6 +289,23 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     paddingTop: 50,
+  },
+  landscapeContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 15,
+  },
+  landscapeBudgetContainer: {
+    width: '30%',
+    justifyContent: 'flex-start',
+    paddingTop: 20,
+  },
+  landscapeListContainer: {
+    flex: 1,
+  },
+  landscapeRow: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 5,
   },
   loadingContainer: {
     flex: 1,
@@ -304,6 +360,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  itemCardLandscape: {
+    flex: 1,
+    marginHorizontal: 5,
+    padding: 15,
   },
   itemName: {
     fontSize: 20,

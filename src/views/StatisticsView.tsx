@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView, StyleSheet, useWindowDimensions } from 'rea
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useOrientation } from '@/hooks/use-orientation';
 import { GameViewModel } from '@/src/viewmodels';
 
 interface StatisticsViewProps {
@@ -12,6 +13,8 @@ interface StatisticsViewProps {
 export function StatisticsView({ viewModel }: StatisticsViewProps) {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
+  const orientation = useOrientation();
+  const isLandscape = orientation === 'landscape';
   
   const [stats, setStats] = useState(viewModel.getStatistics());
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -62,7 +65,11 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
   const formattedStats = getFormattedStats();
 
   const StatCard = ({ title, value, description }: { title: string; value: string; description?: string }) => (
-    <ThemedView style={[styles.statCard, isTablet && styles.statCardTablet]}>
+    <ThemedView style={[
+      styles.statCard, 
+      isTablet && styles.statCardTablet,
+      isLandscape && styles.statCardLandscape
+    ]}>
       <ThemedText type="defaultSemiBold" style={styles.statTitle}>{title}</ThemedText>
       <ThemedText style={styles.statValue}>{value}</ThemedText>
       {description && <ThemedText style={styles.statDescription}>{description}</ThemedText>}
@@ -90,7 +97,10 @@ export function StatisticsView({ viewModel }: StatisticsViewProps) {
           </ThemedView>
         ) : (
           <>
-            <ThemedView style={styles.statsGrid}>
+            <ThemedView style={[
+              styles.statsGrid,
+              isLandscape && styles.statsGridLandscape
+            ]}>
               <StatCard 
                 title="Games Played" 
                 value={formattedStats.gamesPlayed}
@@ -163,6 +173,12 @@ const styles = StyleSheet.create({
   statsGrid: {
     marginBottom: 20,
   },
+  statsGridLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
   statCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 15,
@@ -178,6 +194,12 @@ const styles = StyleSheet.create({
   },
   statCardTablet: {
     padding: 20,
+  },
+  statCardLandscape: {
+    flex: 1,
+    minWidth: '22%',
+    marginHorizontal: 0,
+    marginVertical: 0,
   },
   statTitle: {
     fontSize: 16,

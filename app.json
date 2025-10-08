@@ -3,7 +3,7 @@
     "name": "LB335",
     "slug": "LB335",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "lb335",
     "userInterfaceStyle": "automatic",

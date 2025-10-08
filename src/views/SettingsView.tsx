@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useOrientation } from '@/hooks/use-orientation';
 import { GameViewModel, SettingsViewModel, StatsViewModel } from '@/src/viewmodels';
 
 interface SettingsViewProps {
@@ -17,6 +18,8 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
   const colorScheme = useColorScheme();
+  const orientation = useOrientation();
+  const isLandscape = orientation === 'landscape';
   
   const [settings, setSettings] = useState(settingsViewModel.getSettings());
   const [formattedSettings, setFormattedSettings] = useState(settingsViewModel.getFormattedSettings());
@@ -110,33 +113,44 @@ export function SettingsView({ settingsViewModel, gameViewModel, statsViewModel 
           <ThemedText style={styles.subtitle}>Configure your app experience</ThemedText>
         </ThemedView>
 
-        <ThemedView style={styles.dataManagementSection}>
-          <ThemedText style={styles.sectionTitle}>Data Management</ThemedText>
-          <ThemedText style={styles.dataDescription}>
-            Manage your app data and reset options. Use with caution as these actions cannot be undone.
-          </ThemedText>
-          
-          <ActionButton
-            title="Start New Game"
-            onPress={handleNewGame}
-            variant="default"
-          />
-          
-          <ActionButton
-            title="Reset All Data"
-            onPress={handleResetData}
-            variant="destructive"
-          />
-          
-          <ThemedText style={styles.warningText}>
-            Reset All Data will permanently delete your game progress, statistics, and settings.
-          </ThemedText>
-        </ThemedView>
+        <ThemedView style={[
+          styles.mainContent,
+          isLandscape && styles.mainContentLandscape
+        ]}>
+          <ThemedView style={[
+            styles.dataManagementSection,
+            isLandscape && styles.sectionLandscape
+          ]}>
+            <ThemedText style={styles.sectionTitle}>Data Management</ThemedText>
+            <ThemedText style={styles.dataDescription}>
+              Manage your app data and reset options. Use with caution as these actions cannot be undone.
+            </ThemedText>
+            
+            <ActionButton
+              title="Start New Game"
+              onPress={handleNewGame}
+              variant="default"
+            />
+            
+            <ActionButton
+              title="Reset All Data"
+              onPress={handleResetData}
+              variant="destructive"
+            />
+            
+            <ThemedText style={styles.warningText}>
+              Reset All Data will permanently delete your game progress, statistics, and settings.
+            </ThemedText>
+          </ThemedView>
 
-        <ThemedView style={styles.footer}>
-          <ThemedText style={styles.footerText}>
-            LB335 - Florian Ruby
-          </ThemedText>
+          <ThemedView style={[
+            styles.footer,
+            isLandscape && styles.footerLandscape
+          ]}>
+            <ThemedText style={styles.footerText}>
+              LB335 - Florian Ruby
+            </ThemedText>
+          </ThemedView>
         </ThemedView>
       </ThemedView>
 
@@ -213,6 +227,14 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     textAlign: 'center',
   },
+  mainContent: {
+    flex: 1,
+  },
+  mainContentLandscape: {
+    flexDirection: 'row',
+    gap: 20,
+    alignItems: 'flex-start',
+  },
   dataManagementSection: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 15,
@@ -224,6 +246,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  sectionLandscape: {
+    flex: 2,
+    marginRight: 10,
   },
   sectionTitle: {
     fontSize: 20,
@@ -274,6 +300,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     marginTop: 20,
+  },
+  footerLandscape: {
+    flex: 1,
+    marginTop: 0,
+    justifyContent: 'center',
   },
   footerText: {
     fontSize: 14,
