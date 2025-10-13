@@ -200,7 +200,6 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
   return (
     <ThemedView style={styles.container}>
       {isLandscape ? (
-        // Landscape layout: Budget on left, items list on right
         <ThemedView style={styles.landscapeContainer}>
           <ThemedView style={styles.landscapeBudgetContainer}>
             <ThemedView style={styles.budgetContainer}>
@@ -228,7 +227,6 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
           </ThemedView>
         </ThemedView>
       ) : (
-        // Portrait layout: Budget on top, items list below
         <>
           <ThemedView style={styles.budgetContainer}>
             <ThemedText style={styles.budgetLabel}>Remaining Budget</ThemedText>
@@ -287,8 +285,9 @@ export function MainGameView({ viewModel }: MainGameViewProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
     paddingTop: 50,
+    paddingBottom: 0,
   },
   landscapeContainer: {
     flex: 1,
@@ -323,7 +322,6 @@ const styles = StyleSheet.create({
   },
   budgetContainer: {
     alignItems: 'center',
-    marginBottom: 15,
     padding: 15,
     borderRadius: 10,
     shadowColor: '#000',
@@ -347,7 +345,6 @@ const styles = StyleSheet.create({
   },
   itemsList: {
     flex: 1,
-    marginBottom: 20,
   },
   itemCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
