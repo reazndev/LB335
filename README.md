@@ -1,6 +1,6 @@
 # LB335
 
-[Dokumentation](https://reazndev.github.io/LB335/docs/lb335/intro)
+[Dokumentation](https://reazndev.github.io/LB335/docs/)
 
 ---
 
